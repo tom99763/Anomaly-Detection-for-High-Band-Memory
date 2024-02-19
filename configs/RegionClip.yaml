@@ -11,3 +11,5 @@ superpixel:
 
 gnn:
   gnn_type: 'GAT'
+  level: 'node'
+  heads : 1

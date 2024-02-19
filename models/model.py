@@ -10,10 +10,16 @@ class GNN(nn.Module):
     def __init__(self, config):
         super().__init__()
         gnn_type = config['gnn']['gnn_type']
-        module = GCNConv if gnn_type == 'GCN' else GATConv
-        self.gnn1 = module(640, 64)
-        self.gnn2 = module(64, 64)
-        self.gnn3 = module(64, 640)
+
+        if gnn_type == 'GCN':
+            self.gnn1 = GCNConv(640, 64)
+            self.gnn2 = GCNConv(64, 64)
+            self.gnn3 = GCNConv(64, 640)
+        elif gnn_type == 'GAT':
+            heads = config['gnn']['heads']
+            self.gnn1 = GATConv(640, 64, heads = heads)
+            self.gnn2 = GATConv(64, 64, heads = heads)
+            self.gnn3 = GATConv(64, 640, heads = heads)
     def forward(self, x, edges):
         x = F.relu(self.gnn1(x, edges.T))
         x = F.relu(self.gnn2(x, edges.T))
@@ -24,13 +30,14 @@ class RegionClipModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.level = config['gnn']['level']
         self.clip, _, self._transform = create_model_and_transforms(**config['clip'])
         for param in self.clip.parameters():
             param.requires_grad = False
         self.gnn = GNN(config)
         self.prompt = Learned_Prompt(config, self.clip)
         self.get_text_embs()
-    def forward(self, x, level='node'):
+    def forward(self, x):
         batch_size = x.shape[0]
         batch_region_embs, batch_edges = self.get_region_embs(x) #[(N, d), ...], [[...,]]
         text_embs = F.normalize(self.text_embs) #(2, 640)
@@ -40,7 +47,7 @@ class RegionClipModel(nn.Module):
             region_embs = batch_region_embs[i] #(N, d)
             edges = batch_edges[i]
             region_nodes = self.gnn(region_embs, edges)
-            if level == 'node':
+            if self.level == 'node':
                 region_nodes = F.normalize(region_nodes, dim=1)
                 pred = region_nodes @ text_embs.T/temp #(N, 2)
             else:
