@@ -37,8 +37,9 @@ class RegionClipModel(nn.Module):
         )
         for param in self.clip.parameters():
             param.requires_grad = False
-        self.gnn = GNN(config)
-        self.prompt = Learned_Prompt(config, self.clip)
+        self.clip = self.clip.to('cuda')
+        self.gnn = GNN(config).to('cuda')
+        self.prompt = Learned_Prompt(config, self.clip).to('cuda')
         self.get_text_embs()
     def forward(self, x):
         x = x.cuda()

@@ -41,7 +41,7 @@ class Learned_Prompt(nn.Module):
     def encode_text(self, text, normalize=False):
         cast_dtype = self.clip.transformer.get_cast_dtype()
         text_length = len(text.split(' '))
-        text_token = tokenize(text)
+        text_token = tokenize(text).to('cuda')
         x = self.clip.token_embedding(text_token).to(cast_dtype)  # [batch_size, n_ctx, d_model]
 
         # adding context

@@ -33,7 +33,11 @@ class RegionClip(L.LightningModule):
         self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
 
+    def backward(self, loss):
+        loss.backward(retain_graph=True)
+
     def configure_optimizers(self):
+        #optim.SGD(params=self.model.parameters(), lr=0.001)
         return optim.Adam(
             params=self.model.parameters(),
             lr=0.001

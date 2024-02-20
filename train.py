@@ -35,8 +35,8 @@ def main():
         print('load weights successfully')
 
     #callbacks
-    earlystop = EarlyStopping(monitor="val_loss", patience=3, mode="min")
-    modelckpt = ModelCheckpoint(monitor='val_loss',
+    earlystop = EarlyStopping(monitor="loss:", patience=3, mode="min")
+    modelckpt = ModelCheckpoint(monitor='loss:',
                 dirpath = opt.ckpt_dir,
                 filename = config['file_name'],
                 mode='min',
@@ -44,10 +44,11 @@ def main():
     #train
     trainer = L.Trainer(
         max_epochs= opt.num_epochs,
-        callbacks=[earlystop],
+        #callbacks=[earlystop],
         accelerator="gpu",
         logger= CSVLogger(config['output_log_dir']),
-        log_every_n_steps=18
+        log_every_n_steps=100,
+        check_val_every_n_epoch=2
     )
     trainer.fit(model=model, datamodule=dataset)
 
