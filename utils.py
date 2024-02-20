@@ -10,7 +10,8 @@ def build_dirs(config, opt):
     class_name = config['clip']['class_name']
     num_prompts = config['clip']['num_prompts']
     num_segments = config['superpixel']['numSegments']
-    file_name = f'{model_name}_{class_name}_{num_prompts}_{num_segments}'
+    gnn_type = config['gnn']['gnn_type']
+    file_name = f'{model_name}_{class_name}_{num_prompts}_{num_segments}_{gnn_type}'
     config['file_name'] = file_name
     output_dir = f'{opt.output_dir}/{file_name}'
     ckpt_dir = f'{opt.ckpt_dir}/{file_name}.ckpt'
