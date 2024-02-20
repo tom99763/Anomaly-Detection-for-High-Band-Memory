@@ -33,17 +33,21 @@ def main():
     if os.path.exists(config['ckpt_dir']):
         model.load_from_checkpoint(config['ckpt_dir'])
         print('load weights successfully')
-    trainer = L.Trainer(
-        callbacks=[
-            EarlyStopping(monitor="val_loss", patience=3, mode="min"),
-            ModelCheckpoint(monitor='val_loss',
+
+    #callbacks
+    earlystop = EarlyStopping(monitor="val_loss", patience=3, mode="min")
+    modelckpt = ModelCheckpoint(monitor='val_loss',
                 dirpath = opt.ckpt_dir,
                 filename = config['file_name'],
                 mode='min',
             )
-        ],
+    #train
+    trainer = L.Trainer(
+        max_epochs= opt.num_epochs,
+        callbacks=[earlystop],
         accelerator="gpu",
-        logger= CSVLogger(config['output_log_dir'])
+        logger= CSVLogger(config['output_log_dir']),
+        log_every_n_steps=18
     )
     trainer.fit(model=model, datamodule=dataset)
 

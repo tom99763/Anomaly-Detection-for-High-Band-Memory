@@ -41,14 +41,15 @@ class RegionClipModel(nn.Module):
         self.prompt = Learned_Prompt(config, self.clip)
         self.get_text_embs()
     def forward(self, x):
+        x = x.cuda()
         batch_size = x.shape[0]
         batch_region_embs, batch_edges, batch_regions = self.get_region_embs(x) #[(N, d), ...], [[...,]]
-        text_embs = F.normalize(self.text_embs) #(2, 640)
+        text_embs = F.normalize(self.text_embs).to(x.device) #(2, 640)
         temp = self.config['clip']['temp']
         batch_preds = []
         for i in range(batch_size):
-            region_embs = batch_region_embs[i] #(N, d)
-            edges = batch_edges[i]
+            region_embs = batch_region_embs[i].to(x.device) #(N, d)
+            edges = batch_edges[i].to(x.device)
             region_nodes = self.gnn(region_embs, edges)
             if self.level == 'node':
                 region_nodes = F.normalize(region_nodes, dim=1)
@@ -79,7 +80,7 @@ class RegionClipModel(nn.Module):
             region_embs = region_embs.view(-1, region_embs.shape[-1])
             batch_region_embs.append(region_embs) #(N, d)
             batch_regions.append(regions)
-            batch_edges.append(batch_edges)
+            batch_edges.append(edges)
         return batch_region_embs, batch_edges, batch_regions
 
     @property

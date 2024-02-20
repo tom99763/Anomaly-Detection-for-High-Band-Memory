@@ -16,22 +16,22 @@ class RegionClip(L.LightningModule):
         self.train()
         batch_preds, batch_regions = self.model(batch)
         loss = self.loss(batch_preds, batch_regions)
-        self.log('train_loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
-        return {'train_loss': loss}
+        self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
+        return {'loss': loss}
 
     def validation_step(self, batch):
         self.eval()
         batch_preds, batch_regions = self.model(batch)
         loss = self.loss(batch_preds, batch_regions)
-        self.log('val_loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
-        return {'val_loss': loss}
+        self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
+        return {'loss': loss}
 
     def test_step(self, batch):
         self.eval()
         batch_preds, batch_regions = self.model(batch)
         loss = self.loss(batch_preds, batch_regions)
-        self.log('test_loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
-        return {'test_loss': loss}
+        self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
+        return {'loss': loss}
 
     def configure_optimizers(self):
         return optim.Adam(

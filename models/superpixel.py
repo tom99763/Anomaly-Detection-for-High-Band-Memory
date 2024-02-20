@@ -9,7 +9,7 @@ def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
     Edges are consturcted by sliding 3x3 kernel to determine whether two regions are connected.
     If a pixel's neighbor is from other region, then two regions are connected.
     '''
-    img = img.permute(1, 2, 0)
+    img = img.permute(1, 2, 0).cpu()
     segments = slic(img, n_segments = numSegments, sigma = sigma)
     regions = segments-1
     h, w = regions.shape
@@ -32,7 +32,7 @@ def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
         edges.append(region_edges)
     edges = np.concatenate(edges,axis=0)
     regions, edges = torch.tensor(regions), torch.tensor(edges)
-    regions, edges = regions.to(img.device), edges.to(img.device)
+    regions, edges = regions.cuda(), edges.cuda()
     return regions, edges
 
 def region_sampling(x, regions):
