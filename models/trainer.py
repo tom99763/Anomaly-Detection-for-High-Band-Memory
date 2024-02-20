@@ -13,12 +13,14 @@ class RegionClip(L.LightningModule):
         self.loss = prior_cross_entropy
 
     def training_step(self, batch):
+        self.train()
         batch_preds, batch_regions = self.model(batch['image'])
         loss = self.loss(batch_preds, batch_regions)
         self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
 
     def validation_step(self, batch):
+        self.eval()
         batch_preds, batch_regions = self.model(batch['image'])
         batch_labels = [make_region_labels(batch_regions[i])
                   for i in range(len(batch_preds))]

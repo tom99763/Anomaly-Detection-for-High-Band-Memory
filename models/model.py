@@ -31,7 +31,10 @@ class RegionClipModel(nn.Module):
         super().__init__()
         self.config = config
         self.level = config['gnn']['level']
-        self.clip, _, self._transform = create_model_and_transforms(**config['clip'])
+        self.clip, _, self._transform = create_model_and_transforms(
+            model_name=config['clip']['model_name'],
+            pretrained=config['clip']['pretrained']
+        )
         for param in self.clip.parameters():
             param.requires_grad = False
         self.gnn = GNN(config)

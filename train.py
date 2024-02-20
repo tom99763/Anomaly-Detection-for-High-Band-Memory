@@ -1,9 +1,9 @@
 import argparse
 from utils import *
 from models.trainer import *
-from train.dataset import *
-from train.metrics import *
-from train.callbacks import *
+from train_tools.dataset import *
+from train_tools.metrics import *
+from train_tools.callbacks import *
 import lightning as L
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
@@ -24,13 +24,12 @@ def main():
     config = get_config()
     build_dirs(config, opt)
 
-    #train
+    #train_tools
     model = RegionClip(config)
     dataset = HBMDataModule(opt, model._transform)
     if os.path.exists(config['ckpt_dir']):
         model.load_from_checkpoint(config['ckpt_dir'])
         print('load weights successfully')
-    model.train()
     trainer = L.Trainer(
         callbacks=[
             EarlyStopping(monitor="val_loss", patience=3, mode="min")
@@ -39,6 +38,5 @@ def main():
         accelerator="gpu"
     )
 
-
-if __name__ == 'main':
+if __name__ == '__main__':
     main()
