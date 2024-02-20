@@ -51,3 +51,10 @@ def region_sampling(x, regions):
     output = torch.stack(output, dim=0)
     return output
 
+def make_region_labels(regions):
+    h, w = regions.shape
+    N = regions.unique().shape[0]
+    target_region = regions[h // 2, w // 2]
+    labels = torch.zeros((N,))
+    labels[target_region] = 1
+    return labels
