@@ -29,11 +29,22 @@ class RegionClip(L.LightningModule):
         batch['batch_labels'] = batch_labels
         return batch_preds, batch_regions, batch_labels
 
+    def test_step(self, batch):
+        self.eval()
+        batch_preds, batch_regions = self.model(batch['image'])
+        batch_labels = [make_region_labels(batch_regions[i])
+                  for i in range(len(batch_preds))]
+        batch['batch_preds'] = batch_preds
+        batch['batch_regions'] = batch_regions
+        batch['batch_labels'] = batch_labels
+        return batch_preds, batch_regions, batch_labels
+
     def configure_optimizers(self):
         return optim.Adam(
             params=self.model.parameters(),
             lr=0.001
         )
+
     @property
     def trainer_arguments(self):
         """Set model-specific trainer arguments."""
