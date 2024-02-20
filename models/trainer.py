@@ -12,32 +12,26 @@ class RegionClip(L.LightningModule):
         self.level = self.model.level
         self.loss = prior_cross_entropy
 
-    def training_step(self, batch):
+    def training_step(self, batch, batch_idx):
         self.train()
-        batch_preds, batch_regions = self.model(batch['image'])
+        batch_preds, batch_regions = self.model(batch)
         loss = self.loss(batch_preds, batch_regions)
-        self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
-        return {'loss': loss}
+        self.log('train_loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
+        return {'train_loss': loss}
 
     def validation_step(self, batch):
         self.eval()
-        batch_preds, batch_regions = self.model(batch['image'])
-        batch_labels = [make_region_labels(batch_regions[i])
-                  for i in range(len(batch_preds))]
-        batch['batch_preds'] = batch_preds
-        batch['batch_regions'] = batch_regions
-        batch['batch_labels'] = batch_labels
-        return batch_preds, batch_regions, batch_labels
+        batch_preds, batch_regions = self.model(batch)
+        loss = self.loss(batch_preds, batch_regions)
+        self.log('val_loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
+        return {'val_loss': loss}
 
     def test_step(self, batch):
         self.eval()
-        batch_preds, batch_regions = self.model(batch['image'])
-        batch_labels = [make_region_labels(batch_regions[i])
-                  for i in range(len(batch_preds))]
-        batch['batch_preds'] = batch_preds
-        batch['batch_regions'] = batch_regions
-        batch['batch_labels'] = batch_labels
-        return batch_preds, batch_regions, batch_labels
+        batch_preds, batch_regions = self.model(batch)
+        loss = self.loss(batch_preds, batch_regions)
+        self.log('test_loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
+        return {'test_loss': loss}
 
     def configure_optimizers(self):
         return optim.Adam(

@@ -6,6 +6,9 @@ from train_tools.metrics import *
 from train_tools.callbacks import *
 import lightning as L
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
+from lightning.pytorch.loggers import CSVLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
+
 
 def parse_opt():
     parser = argparse.ArgumentParser()
@@ -32,11 +35,17 @@ def main():
         print('load weights successfully')
     trainer = L.Trainer(
         callbacks=[
-            EarlyStopping(monitor="val_loss", patience=3, mode="min")
+            EarlyStopping(monitor="val_loss", patience=3, mode="min"),
+            ModelCheckpoint(monitor='val_loss',
+                dirpath = opt.ckpt_dir,
+                filename = config['file_name'],
+                mode='min',
+            )
         ],
-        default_root_dir=opt.ckpt_dir,
-        accelerator="gpu"
+        accelerator="gpu",
+        logger= CSVLogger(config['output_log_dir'])
     )
+    trainer.fit(model=model, datamodule=dataset)
 
 if __name__ == '__main__':
     main()
