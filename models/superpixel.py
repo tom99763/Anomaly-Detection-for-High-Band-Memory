@@ -26,6 +26,7 @@ def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
                         _edges.append([region, tmp])
     _edges = np.array(_edges)
     edges = []
+    #re-ordering based on regions
     for region_idx in np.unique(regions):
         region_edges = _edges[_edges[:, 0]==region_idx]
         edges.append(region_edges)
@@ -42,6 +43,7 @@ def region_sampling(x, regions):
     '''
     num_regions = len(regions.unique())
     output = []
+    #filtering based on region order
     for i in range(num_regions):
         xi = x.clone()
         xi[:, regions!=i] = 0.

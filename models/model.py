@@ -39,7 +39,7 @@ class RegionClipModel(nn.Module):
         self.get_text_embs()
     def forward(self, x):
         batch_size = x.shape[0]
-        batch_region_embs, batch_edges = self.get_region_embs(x) #[(N, d), ...], [[...,]]
+        batch_region_embs, batch_edges, batch_regions = self.get_region_embs(x) #[(N, d), ...], [[...,]]
         text_embs = F.normalize(self.text_embs) #(2, 640)
         temp = self.config['clip']['temp']
         batch_preds = []
@@ -55,7 +55,7 @@ class RegionClipModel(nn.Module):
                 max_node = F.normalize(max_node, dim=0)
                 pred = max_node @ text_embs.T/temp #(2, )
             batch_preds.append(pred)
-        return batch_preds
+        return batch_preds, batch_regions
 
     def get_text_embs(self):
         normal_embs, anormal_embs = self.prompt()
@@ -64,6 +64,7 @@ class RegionClipModel(nn.Module):
     def get_region_embs(self, x):
         batch_size = x.shape[0]
         batch_region_embs = []
+        batch_regions = []
         batch_edges = []
         for i in range(batch_size):
             #regions: (h, w), edges:[...]
@@ -74,8 +75,9 @@ class RegionClipModel(nn.Module):
             region_embs = self.clip.encode_image(x_i)  # (N, d)
             region_embs = region_embs.view(-1, region_embs.shape[-1])
             batch_region_embs.append(region_embs) #(N, d)
+            batch_regions.append(regions)
             batch_edges.append(batch_edges)
-        return batch_region_embs, batch_edges
+        return batch_region_embs, batch_edges, batch_regions
 
     @property
     def text_embs(self):
