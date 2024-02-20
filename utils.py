@@ -12,10 +12,8 @@ def build_dirs(config, opt):
     num_segments = config['superpixel']['numSegments']
     file_name = f'{model_name}_{class_name}_{num_prompts}_{num_segments}'
     output_dir = f'{opt.output_dir}/{file_name}'
-    ckpt_dir = f'{opt.ckpt_dir}/{file_name}'
+    ckpt_dir = f'{opt.ckpt_dir}/{file_name}.ckpt'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    if not os.path.exists(ckpt_dir):
-        os.makedirs(ckpt_dir)
     config['output_dir'] = output_dir
     config['ckpt_dir'] = ckpt_dir

@@ -8,6 +8,7 @@ class RegionClip(L.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.model = RegionClipModel(config)
+        self._transform = self.model._transform
         self.level = self.model.level
         self.loss = prior_cross_entropy
 
@@ -35,3 +36,4 @@ class RegionClip(L.LightningModule):
     def trainer_arguments(self):
         """Set model-specific trainer arguments."""
         return {"gradient_clip_val": 0, "num_sanity_val_steps": 0}
+
