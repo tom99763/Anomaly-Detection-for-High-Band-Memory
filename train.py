@@ -7,7 +7,7 @@ from train_tools.callbacks import *
 import lightning as L
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.loggers import CSVLogger
-from pytorch_lightning.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 
 def parse_opt():
@@ -41,14 +41,14 @@ def main():
                 filename = config['file_name'],
                 mode='min',
             )
+    visualizer = Visualizer(dataset, config)
     #train
     trainer = L.Trainer(
         max_epochs= opt.num_epochs,
-        callbacks=[earlystop],
+        callbacks=[earlystop, modelckpt, visualizer],
         accelerator="gpu",
         logger= CSVLogger(config['output_log_dir']),
-        log_every_n_steps=100,
-        check_val_every_n_epoch=2
+        check_val_every_n_epoch=2,
     )
     trainer.fit(model=model, datamodule=dataset)
 

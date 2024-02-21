@@ -33,10 +33,16 @@ class HBMDataModule(L.LightningDataModule):
         train_dir = list(map(lambda x: f'{train_dir}/{x}',os.listdir(train_dir)))
         self.train_dir, self.val_dir = ttp(train_dir, test_size=opt.val_ratio, random_state=0)
         self.test_dir = list(map(lambda x: f'{test_dir}/{x}',os.listdir(test_dir)))
+
+        self.ds_train = HBMDataset(self.train_dir, self.transform)
+        self.ds_val = HBMDataset(self.val_dir, self.transform)
+        self.ds_test = HBMDataset(self.test_dir, self.transform)
+    '''
     def setup(self, stage: str):
         self.ds_train = HBMDataset(self.train_dir, self.transform)
         self.ds_val = HBMDataset(self.val_dir, self.transform)
         self.ds_test = HBMDataset(self.test_dir, self.transform)
+    '''
 
     def train_dataloader(self):
         return DataLoader(self.ds_train, batch_size=self.batch_size)
