@@ -29,7 +29,7 @@ class Visualizer(Callback):
             ax[1, i].imshow(bound)
             ax[1, i].axis('off')
             ax[2, i].imshow(image)
-            ax[2, i].imshow(mask, alpha=0.7)
+            ax[2, i].imshow(mask, alpha=0.3)
             ax[2, i].axis('off')
         plt.tight_layout()
         plt.savefig(f"{self.config['output_img_dir']}/{self.state['epochs']}.png")

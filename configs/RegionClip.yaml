@@ -10,6 +10,6 @@ superpixel:
   sigma: 3
 
 gnn:
-  gnn_type: 'GAT'
+  gnn_type: 'GCN'
   level: 'node'
   heads : 1
