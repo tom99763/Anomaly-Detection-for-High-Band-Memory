@@ -45,7 +45,7 @@ def main():
     #train
     trainer = L.Trainer(
         max_epochs= opt.num_epochs,
-        callbacks=[earlystop, modelckpt, visualizer],
+        callbacks=[modelckpt, visualizer],
         accelerator="gpu",
         logger= CSVLogger(config['output_log_dir']),
         check_val_every_n_epoch=2,
