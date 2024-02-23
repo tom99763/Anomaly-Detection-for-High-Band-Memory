@@ -12,13 +12,13 @@ class GNN(nn.Module):
         gnn_type = config['gnn']['gnn_type']
         self.heads = config['gnn']['heads']
         if gnn_type == 'GCN':
-            self.gnn1 = GCNConv(640, 640) #(640, 640)
-            self.gnn2 = GCNConv(640, 640)
-            self.gnn3 = GCNConv(640, 640)
+            self.gnn1 = GCNConv(640, 64)
+            self.gnn2 = GCNConv(64, 64)
+            self.gnn3 = GCNConv(64, 640)
         elif gnn_type == 'GAT':
-            self.gnn1 = GATConv(640, 640, heads = self.heads) #(640, 640)
-            self.gnn2 = GATConv(640, 640, heads = self.heads)
-            self.gnn3 = GATConv(640, 640, heads = self.heads)
+            self.gnn1 = GATConv(640, 64, heads = self.heads)
+            self.gnn2 = GATConv(64, 64, heads = self.heads)
+            self.gnn3 = GATConv(64, 640, heads = self.heads)
     def forward(self, x, edges):
         x = F.relu(self.gnn1(x, edges.T))
         x = F.relu(self.gnn2(x, edges.T))

@@ -11,25 +11,26 @@ class RegionClip(L.LightningModule):
         self._transform = self.model._transform
         self.level = self.model.level
         self.loss = prior_cross_entropy
+        self.config = config
 
     def training_step(self, batch, batch_idx):
         self.train()
         batch_preds, batch_regions = self.model(batch)
-        loss = self.loss(batch_preds, batch_regions)
+        loss = self.loss(batch_preds, batch_regions, self.config)
         self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
 
     def validation_step(self, batch):
         self.eval()
         batch_preds, batch_regions = self.model(batch)
-        loss = self.loss(batch_preds, batch_regions)
+        loss = self.loss(batch_preds, batch_regions, self.config)
         self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
 
     def test_step(self, batch):
         self.eval()
         batch_preds, batch_regions = self.model(batch)
-        loss = self.loss(batch_preds, batch_regions)
+        loss = self.loss(batch_preds, batch_regions, self.config)
         self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
 
