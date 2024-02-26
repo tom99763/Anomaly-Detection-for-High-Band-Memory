@@ -54,7 +54,7 @@ class RegionClipModel(nn.Module):
             if self.level == 'node':
                 region_nodes = F.normalize(region_nodes, dim=1)
                 pred = region_nodes @ text_embs.T/temp #(N, 2)
-            else:
+            elif self.level == 'graph':
                 max_node, _ = region_nodes.max(dim=0) #(d,)
                 max_node = F.normalize(max_node, dim=0)
                 pred = max_node @ text_embs.T/temp #(2, )

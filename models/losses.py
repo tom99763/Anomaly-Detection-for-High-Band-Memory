@@ -29,7 +29,7 @@ class FocalLoss(nn.Module):
             return loss.sum()
 
 
-def prior_cross_entropy(batch_preds, batch_regions, config):
+def prior_cross_entropy(batch_preds, batch_regions):
     batch_size = len(batch_preds)
     batch_loss = 0.
     for i in range(batch_size):

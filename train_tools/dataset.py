@@ -11,15 +11,17 @@ def rgb_loader(path):
             return img.convert('RGB')
 
 class HBMDataset(Dataset):
-    def __init__(self, data_dir, transform):
+    def __init__(self, data_dir, label,  transform):
         super().__init__()
         self.data_dir = data_dir
+        self.label = label
         self.transform = transform
     def __getitem__(self, idx):
         _dir = self.data_dir[idx]
+        label = self.label[idx]
         img = rgb_loader(_dir)
         img = self.transform(img)
-        return img
+        return img, label
     def __len__(self):
         return len(self.data_dir)
 
@@ -28,15 +30,30 @@ class HBMDataModule(L.LightningDataModule):
         super().__init__()
         self.batch_size = opt.batch_size
         self.transform = transform
-        train_dir = f'{opt.dataset_dir}/train/defect'
-        test_dir = f'{opt.dataset_dir}/test/defect'
-        train_dir = list(map(lambda x: f'{train_dir}/{x}',os.listdir(train_dir)))
-        self.train_dir, self.val_dir = ttp(train_dir, test_size=opt.val_ratio, random_state=0)
-        self.test_dir = list(map(lambda x: f'{test_dir}/{x}',os.listdir(test_dir)))
+        train_dir = f'{opt.dataset_dir}/train'
+        test_dir = f'{opt.dataset_dir}/test'
+        #train dir
+        train_pass_dir = list(map(lambda x: f'{train_dir}/Pass/{x}',
+                                  os.listdir(f'{train_dir}/Pass')))
+        train_reject_dir = list(map(lambda x: f'{train_dir}/Reject/{x}',
+                                    os.listdir(f'{train_dir}/Reject')))
+        train_dir = train_pass_dir + train_reject_dir
+        train_label = [0] * len(train_pass_dir) + [1] * len(train_reject_dir)
+        self.train_dir, self.val_dir, self.train_label, self.val_label = ttp(train_dir, train_label,
+                                           test_size=opt.val_ratio, random_state=0)
 
-        self.ds_train = HBMDataset(self.train_dir, self.transform)
-        self.ds_val = HBMDataset(self.val_dir, self.transform)
-        self.ds_test = HBMDataset(self.test_dir, self.transform)
+        #test dir
+        test_pass_dir = list(map(lambda x: f'{test_dir}/Pass/{x}',
+                                 os.listdir(f'{test_dir}/Pass')))
+        test_reject_dir = list(map(lambda x: f'{test_dir}/Reject/{x}',
+                                   os.listdir(f'{test_dir}/Reject')))
+        self.test_dir = test_pass_dir + test_reject_dir
+        self.test_label = [0] * len(test_pass_dir) + [1] * len(test_reject_dir)
+
+        #dataset
+        self.ds_train = HBMDataset(self.train_dir, self.train_label, self.transform)
+        self.ds_val = HBMDataset(self.val_dir, self.val_label, self.transform)
+        self.ds_test = HBMDataset(self.test_dir, self.test_label, self.transform)
     '''
     def setup(self, stage: str):
         self.ds_train = HBMDataset(self.train_dir, self.transform)
