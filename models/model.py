@@ -55,9 +55,9 @@ class RegionClipModel(nn.Module):
                 region_nodes = F.normalize(region_nodes, dim=1)
                 pred = region_nodes @ text_embs.T/temp #(N, 2)
             elif self.level == 'graph':
-                max_node, _ = region_nodes.max(dim=0) #(d,)
-                max_node = F.normalize(max_node, dim=0)
-                pred = max_node @ text_embs.T/temp #(2, )
+                pred_node, _ = region_nodes.max(dim=0) #(d,)
+                pred_node = F.normalize(pred_node, dim=0)
+                pred = pred_node @ text_embs.T/temp #(2, )
             batch_preds.append(pred)
         return batch_preds, batch_regions
 
