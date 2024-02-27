@@ -5,6 +5,7 @@ from .superpixel import *
 from .losses import *
 from .prompt import *
 from torch_geometric.nn import GCNConv, GATConv
+from torch_geometric.nn.pool import SAGPooling
 
 class GNN(nn.Module):
     def __init__(self, config):

@@ -32,7 +32,7 @@ def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
         region_edges = _edges[_edges[:, 0]==region_idx]
         edges.append(region_edges)
     edges = np.concatenate(edges,axis=0)
-    regions, edges = torch.tensor(regions), torch.tensor(edges)
+    regions, edges = torch.tensor(regions), torch.tensor(edges, dtype = torch.int64)
     regions, edges = regions.cuda(), edges.cuda()
     return regions, edges
 

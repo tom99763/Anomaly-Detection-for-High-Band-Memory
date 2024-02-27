@@ -98,7 +98,7 @@ class RegionClip(L.LightningModule):
         #optim.SGD(params=self.model.parameters(), lr=0.001)
         return optim.Adam(
             params=self.model.parameters(),
-            lr=0.001
+            lr=1e-3
         )
 
     @property
