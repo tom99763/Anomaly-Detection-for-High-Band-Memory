@@ -22,14 +22,21 @@ class Learned_Prompt(nn.Module):
         super().__init__()
         self.class_name = config['clip']['class_name']
         self.clip = clip
-        self.norm_prompt = nn.Parameter(
-            torch.empty(1, config['clip']['num_prompts'], 640, dtype=torch.float32),
-            requires_grad=True)
-        nn.init.normal_(self.norm_prompt, std=0.02)
-        self.anorm_prompt = nn.Parameter(
-            torch.empty(1, config['clip']['num_prompts'], 640, dtype=torch.float32),
-            requires_grad=True)
-        nn.init.normal_(self.anorm_prompt, std=0.02)
+        self.share_prompt = config['prompt']['share_prompt']
+        if self.share_prompt:
+            self.prompt = nn.Parameter(
+                torch.empty(1, config['clip']['num_prompts'], 640, dtype=torch.float32),
+                requires_grad=True)
+            nn.init.normal_(self.prompt, std=0.02)
+        else:
+            self.norm_prompt = nn.Parameter(
+                torch.empty(1, config['clip']['num_prompts'], 640, dtype=torch.float32),
+                requires_grad=True)
+            nn.init.normal_(self.norm_prompt, std=0.02)
+            self.anorm_prompt = nn.Parameter(
+                torch.empty(1, config['clip']['num_prompts'], 640, dtype=torch.float32),
+                requires_grad=True)
+            nn.init.normal_(self.anorm_prompt, std=0.02)
 
     def forward(self, x=None, normalize=False):
         norm_text = f'green {self.class_name}'
@@ -49,12 +56,16 @@ class Learned_Prompt(nn.Module):
         class_embs = x[:, 1:text_length + 1]
         eos = x[:, text_length + 1][:, None]
         pad = x[:, text_length + 1:]
-        if 'damaged' in text:
-            anorm_prompt = self.anorm_prompt.to(x.device)
-            x = torch.cat([sos, anorm_prompt, class_embs, eos, pad], dim=1)
+        if self.share_prompt:
+            prompt = self.prompt.to(x.device)
+            x = torch.cat([sos, prompt, class_embs, eos, pad], dim=1)
         else:
-            norm_prompt = self.norm_prompt.to(x.device)
-            x = torch.cat([sos, norm_prompt, class_embs, eos, pad], dim=1)
+            if 'damaged' in text:
+                anorm_prompt = self.anorm_prompt.to(x.device)
+                x = torch.cat([sos, anorm_prompt, class_embs, eos, pad], dim=1)
+            else:
+                norm_prompt = self.norm_prompt.to(x.device)
+                x = torch.cat([sos, norm_prompt, class_embs, eos, pad], dim=1)
         x = x[:, :77]
 
         # forward
