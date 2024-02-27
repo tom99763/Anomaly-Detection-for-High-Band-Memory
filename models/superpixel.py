@@ -1,6 +1,7 @@
 import numpy as np
 from skimage.segmentation import slic
 import torch
+from torchvision.transforms import Resize
 
 def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
     '''
@@ -35,6 +36,7 @@ def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
     regions, edges = regions.cuda(), edges.cuda()
     return regions, edges
 
+"""
 def region_sampling(x, regions):
     '''
     :param x: (3, h, w)
@@ -47,6 +49,33 @@ def region_sampling(x, regions):
     for i in range(num_regions):
         xi = x.clone()
         xi[:, regions!=i] = 0.
+        output.append(xi)
+    output = torch.stack(output, dim=0)
+    return output
+"""
+
+def region_sampling(x, regions):
+    '''
+    :param x: (3, h, w)
+    :param regions: (h, w)
+    :return output: (N, 3, h, w)
+    '''
+    _, h, w = x.shape
+    grid_x, grid_y = torch.meshgrid(torch.arange(0, h), torch.arange(0, w), indexing='ij')
+    grid = torch.stack([grid_x, grid_y], dim=0).cuda()
+    resize = Resize([h, w])
+    num_regions = len(regions.unique())
+    output = []
+    for i in range(num_regions):
+        xi = x.clone()
+        xi[:, regions!=i] = 0.
+        region_grid = grid[:, regions==i]
+        min_ptx = region_grid[0].min()
+        min_pty = region_grid[1].min()
+        max_ptx = region_grid[0].max()
+        max_pty = region_grid[1].max()
+        xi = xi[:, min_ptx:max_ptx, min_pty:max_pty]
+        xi = resize(xi)
         output.append(xi)
     output = torch.stack(output, dim=0)
     return output
