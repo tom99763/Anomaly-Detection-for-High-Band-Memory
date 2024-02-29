@@ -2,11 +2,11 @@ clip:
   model_name: "ViT-B-16-plus-240"
   pretrained: "laion400m_e31"
   class_name: 'dots'
-  num_prompts: 0
+  num_prompts: 4
   temp: 0.07
 
 superpixel:
-  numSegments: 200
+  numSegments: 100
   sigma: 3
 
 gnn:
@@ -15,6 +15,6 @@ gnn:
   heads : 1
 
 prompt:
-  linear_probe: True
+  linear_probe: False
   share_prompt: True
 

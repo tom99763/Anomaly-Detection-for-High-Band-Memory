@@ -17,7 +17,7 @@ def parse_opt():
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--val_ratio', type=float, default=0.4)
     parser.add_argument('--batch_size', type=int, default=4)
-    parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--num_epochs', type=int, default=20)
     opt, _ = parser.parse_known_args()
     return opt
 

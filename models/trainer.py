@@ -95,11 +95,14 @@ class RegionClip(L.LightningModule):
         loss.backward(retain_graph=True)
 
     def configure_optimizers(self):
-        #optim.SGD(params=self.model.parameters(), lr=0.001)
-        return optim.Adam(
+        optimizer = optim.Adam(
             params=self.model.parameters(),
             lr=1e-3
         )
+        scheduler = optim.lr_scheduler.ExponentialLR(
+            optimizer, 0.1, last_epoch=-1, verbose=True)
+        return {"optimizer": optimizer,"lr_scheduler": scheduler}
+
 
     @property
     def trainer_arguments(self):
