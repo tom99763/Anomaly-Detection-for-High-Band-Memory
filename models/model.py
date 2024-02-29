@@ -30,6 +30,7 @@ class RegionClipModel(nn.Module):
         super().__init__()
         self.config = config
         self.level = config['gnn']['level']
+        self.linear_probe = config['prompt']['linear_probe']
         self.clip, _, self._transform = create_model_and_transforms(
             model_name=config['clip']['model_name'],
             pretrained=config['clip']['pretrained']
@@ -38,28 +39,36 @@ class RegionClipModel(nn.Module):
             param.requires_grad = False
         self.clip = self.clip.to('cuda')
         self.gnn = GNN(config).to('cuda')
-        self.prompt = Learned_Prompt(config, self.clip).to('cuda')
-        self.get_text_embs()
-        #self.linear_probe = nn.Linear(640, 2)
+
+        if self.linear_probe:
+            self.pred_head = nn.Linear(640, 2)
+        else:
+            self.prompt = Learned_Prompt(config, self.clip).to('cuda')
+            self.get_text_embs()
     def forward(self, x):
         x = x.cuda()
         batch_size = x.shape[0]
         batch_region_embs, batch_edges, batch_regions = self.get_region_embs(x) #[(N, d), ...], [[...,]]
-        text_embs = F.normalize(self.text_embs).to(x.device) #(2, 640)
-        temp = self.config['clip']['temp']
+        if not self.linear_probe:
+            text_embs = F.normalize(self.text_embs).to(x.device) #(2, 640)
+            temp = self.config['clip']['temp']
         batch_preds = []
         for i in range(batch_size):
             region_embs = batch_region_embs[i].to(x.device) #(N, d)
             edges = batch_edges[i].to(x.device)
             region_nodes = self.gnn(region_embs, edges)
+
+
             if self.level == 'node':
                 region_nodes = F.normalize(region_nodes, dim=1)
                 pred = region_nodes @ text_embs.T/temp #(N, 2)
             elif self.level == 'graph':
                 pred_node, _ = region_nodes.max(dim=0) #(d,)
-                #pred = self.linear_prob(pred_node)
-                pred_node = F.normalize(pred_node, dim=0)
-                pred = pred_node @ text_embs.T/temp #(2, )
+                if self.linear_probe:
+                    pred = self.pred_head(pred_node)
+                else:
+                    pred_node = F.normalize(pred_node, dim=0)
+                    pred = pred_node @ text_embs.T / temp  # (2, )
             batch_preds.append(pred)
         return batch_preds, batch_regions
 
