@@ -5,7 +5,6 @@ from .superpixel import *
 from .losses import *
 from .prompt import *
 from torch_geometric.nn import GCNConv, GATConv
-from torch_geometric.nn.pool import SAGPooling
 
 class GNN(nn.Module):
     def __init__(self, config):
@@ -41,6 +40,7 @@ class RegionClipModel(nn.Module):
         self.gnn = GNN(config).to('cuda')
         self.prompt = Learned_Prompt(config, self.clip).to('cuda')
         self.get_text_embs()
+        #self.linear_probe = nn.Linear(640, 2)
     def forward(self, x):
         x = x.cuda()
         batch_size = x.shape[0]
@@ -57,6 +57,7 @@ class RegionClipModel(nn.Module):
                 pred = region_nodes @ text_embs.T/temp #(N, 2)
             elif self.level == 'graph':
                 pred_node, _ = region_nodes.max(dim=0) #(d,)
+                #pred = self.linear_prob(pred_node)
                 pred_node = F.normalize(pred_node, dim=0)
                 pred = pred_node @ text_embs.T/temp #(2, )
             batch_preds.append(pred)
