@@ -100,7 +100,7 @@ class RegionClip(L.LightningModule):
             lr=1e-3
         )
         scheduler = optim.lr_scheduler.ExponentialLR(
-            optimizer, 0.1, last_epoch=-1, verbose=True)
+            optimizer, 0.8, last_epoch=-1, verbose=True)
         return {"optimizer": optimizer,"lr_scheduler": scheduler}
 
 
