@@ -10,6 +10,7 @@ superpixel:
   sigma: 3
 
 gnn:
+  use_gnn: False
   gnn_type: 'GAT'
   level: 'graph'
   heads : 1

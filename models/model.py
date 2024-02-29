@@ -25,12 +25,28 @@ class GNN(nn.Module):
         x = self.gnn3(x, edges.T)
         return x
 
+
+class NN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(640, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 640)
+        )
+    def forward(self, x):
+        return self.layers(x)
+
+
 class RegionClipModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.level = config['gnn']['level']
         self.linear_probe = config['prompt']['linear_probe']
+        self.use_gnn = config['gnn']['use_gnn']
         self.clip, _, self._transform = create_model_and_transforms(
             model_name=config['clip']['model_name'],
             pretrained=config['clip']['pretrained']
@@ -38,7 +54,10 @@ class RegionClipModel(nn.Module):
         for param in self.clip.parameters():
             param.requires_grad = False
         self.clip = self.clip.to('cuda')
-        self.gnn = GNN(config).to('cuda')
+        if self.use_gnn:
+            self.gnn = GNN(config).to('cuda')
+        else:
+            self.nn = NN().to('cuda')
 
         if self.linear_probe:
             self.pred_head = nn.Linear(640, 2)
@@ -56,9 +75,10 @@ class RegionClipModel(nn.Module):
         for i in range(batch_size):
             region_embs = batch_region_embs[i].to(x.device) #(N, d)
             edges = batch_edges[i].to(x.device)
-            region_nodes = self.gnn(region_embs, edges)
-
-
+            if self.use_gnn:
+                region_nodes = self.gnn(region_embs, edges)
+            else:
+                region_nodes = self.nn(region_embs)
             if self.level == 'node':
                 region_nodes = F.normalize(region_nodes, dim=1)
                 pred = region_nodes @ text_embs.T/temp #(N, 2)
