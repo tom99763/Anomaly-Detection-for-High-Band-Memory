@@ -1,4 +1,5 @@
 import argparse
+import torch.cuda
 from utils import *
 from models.trainer import *
 from train_tools.dataset import *
@@ -21,12 +22,12 @@ def parse_opt():
     return opt
 
 def main():
-    torch.manual_seed(0)
     opt = parse_opt()
     config = get_config()
     build_dirs(config, opt)
 
     #train_tools
+    set_seed(0)
     model = RegionClip(config)
     dataset = HBMDataModule(opt, model._transform)
     if os.path.exists(config['ckpt_dir']):

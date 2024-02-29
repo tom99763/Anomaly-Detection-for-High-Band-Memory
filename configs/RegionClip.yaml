@@ -6,7 +6,7 @@ clip:
   temp: 0.07
 
 superpixel:
-  numSegments: 100
+  numSegments: 200
   sigma: 3
 
 gnn:
