@@ -46,7 +46,7 @@ class RegionClipModel(nn.Module):
         self.config = config
         self.level = config['gnn']['level']
         self.linear_probe = config['prompt']['linear_probe']
-        self.use_gnn = config['gnn']['use_gnn']
+        self.net_type = config['gnn']['net_type']
         self.clip, _, self._transform = create_model_and_transforms(
             model_name=config['clip']['model_name'],
             pretrained=config['clip']['pretrained']
@@ -54,9 +54,9 @@ class RegionClipModel(nn.Module):
         for param in self.clip.parameters():
             param.requires_grad = False
         self.clip = self.clip.to('cuda')
-        if self.use_gnn:
+        if self.net_type == 'gnn':
             self.gnn = GNN(config).to('cuda')
-        else:
+        elif self.net_type == 'linear':
             self.nn = NN().to('cuda')
 
         if self.linear_probe:
@@ -75,10 +75,12 @@ class RegionClipModel(nn.Module):
         for i in range(batch_size):
             region_embs = batch_region_embs[i].to(x.device) #(N, d)
             edges = batch_edges[i].to(x.device)
-            if self.use_gnn:
+            if self.net_type == 'gnn':
                 region_nodes = self.gnn(region_embs, edges)
-            else:
+            elif self.net_type == 'linear':
                 region_nodes = self.nn(region_embs)
+            else:
+                region_nodes = region_embs
             if self.level == 'node':
                 region_nodes = F.normalize(region_nodes, dim=1)
                 pred = region_nodes @ text_embs.T/temp #(N, 2)
