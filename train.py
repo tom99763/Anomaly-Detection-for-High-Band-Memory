@@ -74,7 +74,7 @@ if __name__ == '__main__':
                 if linear_probe_:
                     config['superpixel']['numSegments'] = num_segments_
                     config['gnn']['gnn_type'] = gnn_type_
-                    config['prompt']['linea_probe'] = linear_probe_
+                    config['prompt']['linear_probe'] = linear_probe_
                     config['clip']['num_prompts'] = 0
                     config['prompt']['share_prompt'] = True
                     main(config, opt)
@@ -83,7 +83,7 @@ if __name__ == '__main__':
                         for share_prompt_ in share_prompt:
                             config['superpixel']['numSegments'] = num_segments_
                             config['gnn']['gnn_type'] = gnn_type_
-                            config['prompt']['linea_probe'] = linear_probe_
+                            config['prompt']['linear_probe'] = linear_probe_
                             config['clip']['num_prompts'] = num_prompts_
                             config['prompt']['share_prompt'] = share_prompt_
                             main(config, opt)
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         for linear_probe_ in linear_probe:
             if linear_probe_:
                 config['superpixel']['numSegments'] = num_segments_
-                config['prompt']['linea_probe'] = linear_probe_
+                config['prompt']['linear_probe'] = linear_probe_
                 config['clip']['num_prompts'] = 0
                 config['prompt']['share_prompt'] = True
                 main(config, opt)
@@ -101,7 +101,7 @@ if __name__ == '__main__':
                 for num_prompts_ in num_prompts:
                     for share_prompt_ in share_prompt:
                         config['superpixel']['numSegments'] = num_segments_
-                        config['prompt']['linea_probe'] = linear_probe_
+                        config['prompt']['linear_probe'] = linear_probe_
                         config['clip']['num_prompts'] = num_prompts_
                         config['prompt']['share_prompt'] = share_prompt_
                         main(config, opt)
@@ -111,7 +111,7 @@ if __name__ == '__main__':
         for linear_probe_ in linear_probe:
             if linear_probe_:
                 config['superpixel']['numSegments'] = num_segments_
-                config['prompt']['linea_probe'] = linear_probe_
+                config['prompt']['linear_probe'] = linear_probe_
                 config['clip']['num_prompts'] = 0
                 config['prompt']['share_prompt'] = True
                 main(config, opt)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
                 for num_prompts_ in num_prompts:
                     for share_prompt_ in share_prompt:
                         config['superpixel']['numSegments'] = num_segments_
-                        config['prompt']['linea_probe'] = linear_probe_
+                        config['prompt']['linear_probe'] = linear_probe_
                         config['clip']['num_prompts'] = num_prompts_
                         config['prompt']['share_prompt'] = share_prompt_
                         main(config, opt)
