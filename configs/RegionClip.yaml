@@ -6,12 +6,12 @@ clip:
   temp: 0.07
 
 superpixel:
-  numSegments: 75
+  numSegments: 100
   sigma: 3
 
 gnn:
   net_type: 'gnn'
-  gnn_type: 'GCN'
+  gnn_type: 'GAT'
   level: 'graph'
   heads : 1
 

@@ -37,10 +37,10 @@ class HBMDataModule(L.LightningDataModule):
                                   os.listdir(f'{train_dir}/Pass')))
         train_reject_dir = list(map(lambda x: f'{train_dir}/Reject/{x}',
                                     os.listdir(f'{train_dir}/Reject')))
-        train_dir = train_pass_dir + train_reject_dir
-        train_label = [0] * len(train_pass_dir) + [1] * len(train_reject_dir)
-        self.train_dir, self.val_dir, self.train_label, self.val_label = ttp(train_dir, train_label,
-                                           test_size=opt.val_ratio, random_state=0)
+        self.train_dir = train_pass_dir + train_reject_dir
+        self.train_label = [0] * len(train_pass_dir) + [1] * len(train_reject_dir)
+        #self.train_dir, self.val_dir, self.train_label, self.val_label = ttp(train_dir, train_label,
+        #                                   test_size=opt.val_ratio, random_state=0)
 
         #test dir
         test_pass_dir = list(map(lambda x: f'{test_dir}/Pass/{x}',
@@ -52,23 +52,17 @@ class HBMDataModule(L.LightningDataModule):
 
         #dataset
         self.ds_train = HBMDataset(self.train_dir, self.train_label, self.transform)
-        self.ds_val = HBMDataset(self.val_dir, self.val_label, self.transform)
+        #self.ds_val = HBMDataset(self.val_dir, self.val_label, self.transform)
         self.ds_test = HBMDataset(self.test_dir, self.test_label, self.transform)
-    '''
-    def setup(self, stage: str):
-        self.ds_train = HBMDataset(self.train_dir, self.transform)
-        self.ds_val = HBMDataset(self.val_dir, self.transform)
-        self.ds_test = HBMDataset(self.test_dir, self.transform)
-    '''
 
     def train_dataloader(self):
         return DataLoader(self.ds_train, batch_size=self.batch_size,
                           num_workers=19, shuffle=True, persistent_workers=True)
 
     def val_dataloader(self):
-        return DataLoader(self.ds_val, batch_size=self.batch_size,
-                          num_workers=19, persistent_workers=True)
+        return DataLoader(self.ds_test, batch_size=self.batch_size*2,
+                          num_workers=19, persistent_workers=True, shuffle=True)
 
-    def test_dataloader(self):
-        return DataLoader(self.ds_test, batch_size=self.batch_size,
-                          num_workers=19, persistent_workers=True)
+    #def test_dataloader(self):
+    #    return DataLoader(self.ds_test, batch_size=self.batch_size*4,
+    #                      num_workers=19, persistent_workers=True)

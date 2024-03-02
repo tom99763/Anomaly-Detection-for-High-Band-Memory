@@ -41,7 +41,7 @@ class RegionClip(L.LightningModule):
             loss = self.loss(batch_preds, y.long())
         #metrics
         self.auroc.update(batch_preds.softmax(dim=1)[:, 1], y)
-        self.aupr.updata(batch_preds.softmax(dim=1)[:, 1], y)
+        self.aupr.update(batch_preds.softmax(dim=1)[:, 1], y)
         self.log_dict({'val_loss': loss.item(),
                        'val_auroc': self.auroc.compute(),
                        'val_aupr': self.aupr.compute(),

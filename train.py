@@ -16,7 +16,7 @@ def parse_opt():
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--val_ratio', type=float, default=0.4)
-    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=20)
     opt, _ = parser.parse_known_args()
     return opt
@@ -37,11 +37,11 @@ def main():
     dataset = HBMDataModule(opt, model._transform)
 
     #callbacks
-    earlystop = EarlyStopping(monitor="loss:", patience=3, mode="min")
-    modelckpt = ModelCheckpoint(monitor='auroc',
+    earlystop = EarlyStopping(monitor="val_auroc", patience=3, mode="max")
+    modelckpt = ModelCheckpoint(monitor='val_auroc',
                 dirpath = opt.ckpt_dir,
                 filename = config['file_name'],
-                mode='min',
+                mode='max',
             )
     visualizer = Visualizer(dataset, config)
     #train
@@ -52,8 +52,8 @@ def main():
         logger= CSVLogger(config['output_log_dir']),
         check_val_every_n_epoch=2,
     )
-    #trainer.fit(model=model, datamodule=dataset)
-    trainer.test(model = model, datamodule=dataset)
+    trainer.fit(model=model, datamodule=dataset)
+    #trainer.test(model = model, datamodule=dataset)
 
 if __name__ == '__main__':
     main()
