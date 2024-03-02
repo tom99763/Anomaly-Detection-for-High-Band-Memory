@@ -16,14 +16,13 @@ def parse_opt():
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--val_ratio', type=float, default=0.4)
-    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=20)
+    parser.add_argument('--mode', type=str, default='train')
     opt, _ = parser.parse_known_args()
     return opt
 
-def main():
-    opt = parse_opt()
-    config = get_config()
+def main(config, opt):
     build_dirs(config, opt)
 
     #train_tools
@@ -37,7 +36,7 @@ def main():
     dataset = HBMDataModule(opt, model._transform)
 
     #callbacks
-    earlystop = EarlyStopping(monitor="val_auroc", patience=3, mode="max")
+    earlystop = EarlyStopping(monitor="val_auroc", patience=5, mode="max")
     modelckpt = ModelCheckpoint(monitor='val_auroc',
                 dirpath = opt.ckpt_dir,
                 filename = config['file_name'],
@@ -52,8 +51,75 @@ def main():
         logger= CSVLogger(config['output_log_dir']),
         check_val_every_n_epoch=2,
     )
-    #trainer.fit(model=model, datamodule=dataset)
-    trainer.test(model = model, datamodule=dataset)
+
+    if opt.mode == 'train':
+        trainer.fit(model=model, datamodule=dataset)
+    else:
+        trainer.test(model = model, datamodule=dataset)
 
 if __name__ == '__main__':
-    main()
+    opt = parse_opt()
+    config = get_config()
+
+    gnn_type = ['GAT', 'GCN']
+    share_prompt = [True, False]
+    linear_probe = [True, False]
+    num_segments = [100, 200]
+    num_prompts = [0, 4, 8, 12]
+
+    config['gnn']['net_type'] = 'gnn'
+    for num_segments_ in num_segments:
+        for gnn_type_ in gnn_type:
+            for linear_probe_ in linear_probe:
+                if linear_probe_:
+                    config['superpixel']['num_segments'] = num_segments_
+                    config['gnn']['gnn_type'] = gnn_type_
+                    config['prompt']['linea_probe'] = linear_probe_
+                    config['clip']['num_prompts'] = 0
+                    config['prompt']['share_prompt'] = True
+                    main(config, opt)
+                else:
+                    for num_prompts_ in num_prompts:
+                        for share_prompt_ in share_prompt:
+                            config['superpixel']['num_segments'] = num_segments_
+                            config['gnn']['gnn_type'] = gnn_type_
+                            config['prompt']['linea_probe'] = linear_probe_
+                            config['clip']['num_prompts'] = num_prompts_
+                            config['prompt']['share_prompt'] = share_prompt_
+                            main(config, opt)
+
+    config['gnn']['net_type'] = 'linear'
+    for num_segments_ in num_segments:
+        for linear_probe_ in linear_probe:
+            if linear_probe_:
+                config['superpixel']['num_segments'] = num_segments_
+                config['prompt']['linea_probe'] = linear_probe_
+                config['clip']['num_prompts'] = 0
+                config['prompt']['share_prompt'] = True
+                main(config, opt)
+            else:
+                for num_prompts_ in num_prompts:
+                    for share_prompt_ in share_prompt:
+                        config['superpixel']['num_segments'] = num_segments_
+                        config['prompt']['linea_probe'] = linear_probe_
+                        config['clip']['num_prompts'] = num_prompts_
+                        config['prompt']['share_prompt'] = share_prompt_
+                        main(config, opt)
+
+    config['net_type'] = 'none'
+    for num_segments_ in num_segments:
+        for linear_probe_ in linear_probe:
+            if linear_probe_:
+                config['superpixel']['num_segments'] = num_segments_
+                config['prompt']['linea_probe'] = linear_probe_
+                config['clip']['num_prompts'] = 0
+                config['prompt']['share_prompt'] = True
+                main(config, opt)
+            else:
+                for num_prompts_ in num_prompts:
+                    for share_prompt_ in share_prompt:
+                        config['superpixel']['num_segments'] = num_segments_
+                        config['prompt']['linea_probe'] = linear_probe_
+                        config['clip']['num_prompts'] = num_prompts_
+                        config['prompt']['share_prompt'] = share_prompt_
+                        main(config, opt)
