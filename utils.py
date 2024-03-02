@@ -30,10 +30,19 @@ def build_dirs(config, opt):
     file_name = f'{model_name}_{class_name}_{num_prompts}_{num_segments}_{gnn_type}' \
                 f'_{share_prompt}_{linear_probe}_{net_type}'
     config['file_name'] = file_name
-    output_dir = f'{opt.output_dir}/{file_name}'
-    ckpt_dir = f'{opt.ckpt_dir}/{file_name}.ckpt'
+
+    output_dir = f'{opt.output_dir}/{net_type}'
+    ckpt_dir = f'{opt.ckpt_dir}/{net_type}'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+
+    output_dir = f'{output_dir}/{file_name}'
+    ckpt_dir = f'{ckpt_dir}/{file_name}.ckpt'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     config['output_dir'] = output_dir
     config['ckpt_dir'] = ckpt_dir
     output_img_dir = f'{output_dir}/img'
