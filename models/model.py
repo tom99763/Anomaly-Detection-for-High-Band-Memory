@@ -4,7 +4,7 @@ from open_clip import create_model_and_transforms
 from .superpixel import *
 from .losses import *
 from .prompt import *
-from torch_geometric.nn import GCNConv, GATConv
+from torch_geometric.nn import GCNConv, GATConv, GATv2Conv
 
 class GNN(nn.Module):
     def __init__(self, config):
@@ -15,6 +15,7 @@ class GNN(nn.Module):
             self.gnn1 = GCNConv(640, 64)
             self.gnn2 = GCNConv(64, 64)
             self.gnn3 = GCNConv(64, 640)
+
         elif gnn_type == 'GAT':
             self.gnn1 = GATConv(640, 64, heads = self.heads)
             self.gnn2 = GATConv(64, 64, heads = self.heads)

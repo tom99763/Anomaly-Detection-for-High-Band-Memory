@@ -28,15 +28,17 @@ def main():
 
     #train_tools
     set_seed(0)
-    model = RegionClip(config)
-    dataset = HBMDataModule(opt, model._transform)
     if os.path.exists(config['ckpt_dir']):
-        model.load_from_checkpoint(config['ckpt_dir'])
+        model = RegionClip.load_from_checkpoint(config['ckpt_dir'], config=config)
         print('load weights successfully')
+    else:
+        model = RegionClip(config)
+        print('no weights')
+    dataset = HBMDataModule(opt, model._transform)
 
     #callbacks
     earlystop = EarlyStopping(monitor="loss:", patience=3, mode="min")
-    modelckpt = ModelCheckpoint(monitor='loss:',
+    modelckpt = ModelCheckpoint(monitor='auroc',
                 dirpath = opt.ckpt_dir,
                 filename = config['file_name'],
                 mode='min',
@@ -50,7 +52,8 @@ def main():
         logger= CSVLogger(config['output_log_dir']),
         check_val_every_n_epoch=2,
     )
-    trainer.fit(model=model, datamodule=dataset)
+    #trainer.fit(model=model, datamodule=dataset)
+    trainer.test(model = model, datamodule=dataset)
 
 if __name__ == '__main__':
     main()

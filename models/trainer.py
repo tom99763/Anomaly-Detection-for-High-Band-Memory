@@ -17,7 +17,6 @@ class RegionClip(L.LightningModule):
         #metrics
         self.auroc = AUROC()
         self.aupr = AUPR()
-        self.optmal_f1 = OptimalF1(2)
 
     def training_step(self, batch, batch_idx):
         self.train()
@@ -41,25 +40,21 @@ class RegionClip(L.LightningModule):
         else:
             loss = self.loss(batch_preds, y.long())
         #metrics
-        auroc = self.auroc(batch_preds.softmax(dim=1)[:, 1], y)
-        aupr = self.aupr(batch_preds.softmax(dim=1)[:, 1], y)
-        opt_f1 = self.optmal_f1(batch_preds.softmax(dim=1), y)
+        self.auroc.update(batch_preds.softmax(dim=1)[:, 1], y)
+        self.aupr.updata(batch_preds.softmax(dim=1)[:, 1], y)
         self.log_dict({'val_loss': loss.item(),
-                       'val_auroc': auroc,
-                       'val_aupr': aupr,
-                       'val_opt_f1': opt_f1
+                       'val_auroc': self.auroc.compute(),
+                       'val_aupr': self.aupr.compute(),
                        },
                       on_epoch=True, prog_bar=True, logger=True)
-        return {'loss': loss, 'auroc': auroc, 'aupr': aupr, 'opt_f1': opt_f1}
+        return {'loss': loss, 'auroc': self.auroc.compute(), 'aupr': self.aupr.compute()}
 
     def on_validation_epoch_end(self):
         auroc = self.auroc.compute()
         aupr = self.aupr.compute()
-        opt_f1 = self.optmal_f1.compute()
-        self.log_dict({'val_auroc': auroc, 'val_aupr': aupr, 'val_opt_f1': opt_f1})
+        self.log_dict({'val_auroc': auroc, 'val_aupr': aupr})
         self.auroc.reset()
         self.aupr.reset()
-        self.optmal_f1.reset()
 
     def test_step(self, batch):
         self.eval()
@@ -71,25 +66,21 @@ class RegionClip(L.LightningModule):
         else:
             loss = self.loss(batch_preds, y.long())
         # metrics
-        auroc = self.auroc(batch_preds.softmax(dim=1)[:, 1], y)
-        aupr = self.aupr(batch_preds.softmax(dim=1)[:, 1], y)
-        opt_f1 = self.optmal_f1(batch_preds.softmax(dim=1), y)
+        self.auroc.update(batch_preds.softmax(dim=1)[:, 1], y)
+        self.aupr.update(batch_preds.softmax(dim=1)[:, 1], y)
         self.log_dict({'test_loss': loss.item(),
-                       'test_auroc': auroc,
-                       'test_aupr': aupr,
-                       'test_opt_f1': opt_f1
+                       'test_auroc': self.auroc.compute(),
+                       'test_aupr': self.aupr.compute(),
                        },
                       on_epoch=True, prog_bar=True, logger=True)
-        return {'loss': loss, 'auroc': auroc, 'aupr': aupr, 'opt_f1': opt_f1}
+        return {'loss': loss, 'auroc': self.auroc.compute(), 'aupr': self.aupr.compute()}
 
     def on_test_end(self):
         auroc = self.auroc.compute()
         aupr = self.aupr.compute()
-        opt_f1 = self.optmal_f1.compute()
-        self.log_dict({'test_auroc': auroc, 'test_aupr': aupr, 'test_opt_f1': opt_f1})
+        #self.log_dict({'test_auroc': auroc, 'test_aupr': aupr})
         self.auroc.reset()
         self.aupr.reset()
-        self.optmal_f1.reset()
 
     def backward(self, loss):
         loss.backward(retain_graph=True)
