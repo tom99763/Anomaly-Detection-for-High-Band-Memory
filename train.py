@@ -46,7 +46,7 @@ def main(config, opt):
     #train
     trainer = L.Trainer(
         max_epochs= opt.num_epochs,
-        callbacks=[modelckpt, visualizer],
+        callbacks=[earlystop, modelckpt, visualizer],
         accelerator="gpu",
         logger= CSVLogger(config['output_log_dir']),
         check_val_every_n_epoch=2,
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     gnn_type = ['GAT', 'GCN']
     share_prompt = [True, False]
     linear_probe = [True, False]
-    num_segments = [100, 200]
+    num_segments = [75, 100, 200]
     num_prompts = [0, 4, 8, 12]
 
     config['gnn']['net_type'] = 'gnn'
@@ -72,7 +72,7 @@ if __name__ == '__main__':
         for gnn_type_ in gnn_type:
             for linear_probe_ in linear_probe:
                 if linear_probe_:
-                    config['superpixel']['num_segments'] = num_segments_
+                    config['superpixel']['numSegments'] = num_segments_
                     config['gnn']['gnn_type'] = gnn_type_
                     config['prompt']['linea_probe'] = linear_probe_
                     config['clip']['num_prompts'] = 0
@@ -81,7 +81,7 @@ if __name__ == '__main__':
                 else:
                     for num_prompts_ in num_prompts:
                         for share_prompt_ in share_prompt:
-                            config['superpixel']['num_segments'] = num_segments_
+                            config['superpixel']['numSegments'] = num_segments_
                             config['gnn']['gnn_type'] = gnn_type_
                             config['prompt']['linea_probe'] = linear_probe_
                             config['clip']['num_prompts'] = num_prompts_
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     for num_segments_ in num_segments:
         for linear_probe_ in linear_probe:
             if linear_probe_:
-                config['superpixel']['num_segments'] = num_segments_
+                config['superpixel']['numSegments'] = num_segments_
                 config['prompt']['linea_probe'] = linear_probe_
                 config['clip']['num_prompts'] = 0
                 config['prompt']['share_prompt'] = True
@@ -100,7 +100,7 @@ if __name__ == '__main__':
             else:
                 for num_prompts_ in num_prompts:
                     for share_prompt_ in share_prompt:
-                        config['superpixel']['num_segments'] = num_segments_
+                        config['superpixel']['numSegments'] = num_segments_
                         config['prompt']['linea_probe'] = linear_probe_
                         config['clip']['num_prompts'] = num_prompts_
                         config['prompt']['share_prompt'] = share_prompt_
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     for num_segments_ in num_segments:
         for linear_probe_ in linear_probe:
             if linear_probe_:
-                config['superpixel']['num_segments'] = num_segments_
+                config['superpixel']['numSegments'] = num_segments_
                 config['prompt']['linea_probe'] = linear_probe_
                 config['clip']['num_prompts'] = 0
                 config['prompt']['share_prompt'] = True
@@ -118,7 +118,7 @@ if __name__ == '__main__':
             else:
                 for num_prompts_ in num_prompts:
                     for share_prompt_ in share_prompt:
-                        config['superpixel']['num_segments'] = num_segments_
+                        config['superpixel']['numSegments'] = num_segments_
                         config['prompt']['linea_probe'] = linear_probe_
                         config['clip']['num_prompts'] = num_prompts_
                         config['prompt']['share_prompt'] = share_prompt_
