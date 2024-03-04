@@ -38,7 +38,7 @@ def main(config, opt):
     #callbacks
     earlystop = EarlyStopping(monitor="val_auroc", patience=5, mode="max")
     modelckpt = ModelCheckpoint(monitor='val_auroc',
-                dirpath = opt.ckpt_dir,
+                dirpath = f"{opt.ckpt_dir}/{config['gnn']['net_type']}",
                 filename = config['file_name'],
                 mode='max',
             )
@@ -67,6 +67,7 @@ if __name__ == '__main__':
     num_segments = [75, 100, 200]
     num_prompts = [0, 4, 8, 12]
 
+    '''
     config['gnn']['net_type'] = 'gnn'
     for num_segments_ in num_segments:
         for gnn_type_ in gnn_type:
@@ -105,8 +106,9 @@ if __name__ == '__main__':
                         config['clip']['num_prompts'] = num_prompts_
                         config['prompt']['share_prompt'] = share_prompt_
                         main(config, opt)
+    '''
 
-    config['net_type'] = 'none'
+    config['gnn']['net_type'] = 'none'
     for num_segments_ in num_segments:
         for linear_probe_ in linear_probe:
             if linear_probe_:
