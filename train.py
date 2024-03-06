@@ -12,13 +12,13 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_dir', type=str, default='../datasets/HBM/HBM-AfterManualJudge/type3')
+    parser.add_argument('--dataset_dir', type=str, default='../datasets/HBM/HBM-AfterManualJudge/type2')
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--val_ratio', type=float, default=0.4)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=20)
-    parser.add_argument('--mode', type=str, default='train')
+    parser.add_argument('--mode', type=str, default='test')
     opt, _ = parser.parse_known_args()
     return opt
 
@@ -46,7 +46,7 @@ def main(config, opt):
     #train
     trainer = L.Trainer(
         max_epochs= opt.num_epochs,
-        callbacks=[earlystop, modelckpt, visualizer],
+        callbacks=[modelckpt, visualizer],
         accelerator="gpu",
         logger= CSVLogger(config['output_log_dir']),
         check_val_every_n_epoch=2,
@@ -63,11 +63,10 @@ if __name__ == '__main__':
 
     gnn_type = ['GAT', 'GCN']
     share_prompt = [True, False]
-    linear_probe = [True, False]
+    linear_probe = [False, True]
     num_segments = [75, 100, 200]
     num_prompts = [0, 4, 8, 12]
 
-    '''
     config['gnn']['net_type'] = 'gnn'
     for num_segments_ in num_segments:
         for gnn_type_ in gnn_type:
@@ -105,8 +104,7 @@ if __name__ == '__main__':
                         config['prompt']['linear_probe'] = linear_probe_
                         config['clip']['num_prompts'] = num_prompts_
                         config['prompt']['share_prompt'] = share_prompt_
-                        main(config, opt)
-    '''
+                        main(config, opt)         
 
     config['gnn']['net_type'] = 'none'
     for num_segments_ in num_segments:
@@ -119,9 +117,12 @@ if __name__ == '__main__':
                 main(config, opt)
             else:
                 for num_prompts_ in num_prompts:
+                    if num_prompts_ == 0:
+                        continue
                     for share_prompt_ in share_prompt:
                         config['superpixel']['numSegments'] = num_segments_
                         config['prompt']['linear_probe'] = linear_probe_
                         config['clip']['num_prompts'] = num_prompts_
                         config['prompt']['share_prompt'] = share_prompt_
                         main(config, opt)
+

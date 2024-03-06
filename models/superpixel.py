@@ -54,7 +54,7 @@ def region_sampling(x, regions):
     return output
 """
 
-def region_sampling(x, regions):
+def region_sampling(x, regions, pad_green=False):
     '''
     :param x: (3, h, w)
     :param regions: (h, w)
@@ -68,7 +68,15 @@ def region_sampling(x, regions):
     output = []
     for i in range(num_regions):
         xi = x.clone()
-        xi[:, regions!=i] = 0.
+        xi[:, regions !=i] = 0.
+
+        if pad_green:
+            # green background
+            xi[0, regions != i] = -1.7923
+            xi[1, regions != i] = 2.0749
+            xi[2, regions != i] = -1.4802
+
+        #sample
         region_grid = grid[:, regions==i]
         min_ptx = region_grid[0].min()
         min_pty = region_grid[1].min()

@@ -41,8 +41,8 @@ class Learned_Prompt(nn.Module):
                 nn.init.normal_(self.anorm_prompt, std=0.02)
 
     def forward(self, x=None, normalize=False):
-        norm_text = f'green {self.class_name}'
-        anorm_text = f'damaged green {self.class_name}'
+        norm_text = f'circle'
+        anorm_text = f'damaged circle'
         norm_embs = self.encode_text(norm_text, normalize)
         anorm_embs = self.encode_text(anorm_text, normalize)
         return norm_embs, anorm_embs

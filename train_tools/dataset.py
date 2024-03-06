@@ -35,8 +35,12 @@ class HBMDataModule(L.LightningDataModule):
         #train dir
         train_pass_dir = list(map(lambda x: f'{train_dir}/Pass/{x}',
                                   os.listdir(f'{train_dir}/Pass')))
-        train_reject_dir = list(map(lambda x: f'{train_dir}/Reject/{x}',
-                                    os.listdir(f'{train_dir}/Reject')))
+
+        try:
+            train_reject_dir = list(map(lambda x: f'{train_dir}/Reject/{x}',
+                                        os.listdir(f'{train_dir}/Reject')))
+        except:
+            train_reject_dir = []
         self.train_dir = train_pass_dir + train_reject_dir
         self.train_label = [0] * len(train_pass_dir) + [1] * len(train_reject_dir)
         #self.train_dir, self.val_dir, self.train_label, self.val_label = ttp(train_dir, train_label,

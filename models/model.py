@@ -65,10 +65,10 @@ class RegionClipModel(nn.Module):
         else:
             self.prompt = Learned_Prompt(config, self.clip).to('cuda')
             self.get_text_embs()
-    def forward(self, x):
+    def forward(self, x, pad_green=False):
         x = x.cuda()
         batch_size = x.shape[0]
-        batch_region_embs, batch_edges, batch_regions = self.get_region_embs(x) #[(N, d), ...], [[...,]]
+        batch_region_embs, batch_edges, batch_regions = self.get_region_embs(x, pad_green) #[(N, d), ...], [[...,]]
         if not self.linear_probe:
             text_embs = F.normalize(self.text_embs).to(x.device) #(2, 640)
             temp = self.config['clip']['temp']
@@ -99,7 +99,7 @@ class RegionClipModel(nn.Module):
         normal_embs, anormal_embs = self.prompt()
         self._text_embs = torch.cat([normal_embs, anormal_embs], axis=0) #(2, d)
 
-    def get_region_embs(self, x):
+    def get_region_embs(self, x, pad_green=False):
         batch_size = x.shape[0]
         batch_region_embs = []
         batch_regions = []
@@ -109,7 +109,7 @@ class RegionClipModel(nn.Module):
             x_i = x[i]
             regions, edges = super_pixel_graph_construct(
                 x_i, **self.config['superpixel'])
-            x_i = region_sampling(x_i, regions)  # (N, 3, h, w)
+            x_i = region_sampling(x_i, regions, pad_green)  # (N, 3, h, w)
             region_embs = self.clip.encode_image(x_i)  # (N, d)
             region_embs = region_embs.view(-1, region_embs.shape[-1])
             batch_region_embs.append(region_embs) #(N, d)

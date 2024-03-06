@@ -1,7 +1,7 @@
 clip:
   model_name: "ViT-B-16-plus-240"
   pretrained: "laion400m_e31"
-  class_name: 'dots'
+  class_name: 'green dots'
   num_prompts: 4
   temp: 0.07
 
