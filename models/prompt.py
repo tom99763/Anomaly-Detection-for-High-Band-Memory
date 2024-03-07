@@ -83,3 +83,6 @@ class Learned_Prompt(nn.Module):
             else:
                 x = x @ self.clip.text_projection
         return F.normalize(x, dim=-1) if normalize else x
+
+
+
