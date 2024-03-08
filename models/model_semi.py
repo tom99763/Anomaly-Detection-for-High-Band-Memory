@@ -63,10 +63,12 @@ class RegionClipSemiModel(nn.Module):
 
         self.get_text_embs()
 
-    def forward(self, x, pad_green=False):
+    def forward(self, x, pad_green=False, augment = False):
         x = x.cuda()
         batch_size = x.shape[0]
-        batch_region_embs, batch_edges, batch_regions = self.get_region_embs(x, pad_green)
+
+        batch_region_embs, batch_edges, \
+        batch_regions, batch_anorm_idx = self.get_region_embs(x, pad_green, augment)
 
         text_embs = F.normalize(self.text_embs).to(x.device) #(2, 640)
         temp = self.config['clip']['temp']
@@ -83,7 +85,7 @@ class RegionClipSemiModel(nn.Module):
             elif self.net_type == 'linear':
                 region_nodes = self.nn(region_embs)
             else:
-                region_nodes = region_embs
+                raise  Exception('invalid net_type')
 
             batch_region_nodes.append(region_nodes)
 
@@ -99,7 +101,7 @@ class RegionClipSemiModel(nn.Module):
             batch_region_emb_preds.append(emb_pred)
 
         return batch_region_embs, batch_region_nodes, \
-               batch_region_emb_preds, batch_region_node_preds
+               batch_region_emb_preds, batch_region_node_preds, batch_anorm_idx
 
     def get_text_embs(self):
         class_name = self.config['clip']['class_name']
@@ -118,23 +120,27 @@ class RegionClipSemiModel(nn.Module):
         mean_anorm_prompt = torch.cat(mean_anorm_prompt, dim=0).mean(dim=0) #(640, )
         self._text_embs = torch.stack([mean_norm_prompt, mean_anorm_prompt], dim=0) #(2, 640)
 
-    def get_region_embs(self, x, pad_green=False):
+    def get_region_embs(self, x, pad_green=False, augment=False):
         batch_size = x.shape[0]
         batch_region_embs = []
         batch_regions = []
         batch_edges = []
+        batch_anorm_idx = []
         for i in range(batch_size):
             # regions: (h, w), edges:[...]
             x_i = x[i]
             regions, edges = super_pixel_graph_construct(
                 x_i, **self.config['superpixel'])
             x_i = region_sampling(x_i, regions, pad_green)  # (N, 3, h, w)
+            if augment:
+                x_i, idx = region_augment(x_i)
+                batch_anorm_idx.append(idx)
             region_embs = self.clip.encode_image(x_i)  # (N, d)
             region_embs = region_embs.view(-1, region_embs.shape[-1])
             batch_region_embs.append(region_embs)  # (N, d)
             batch_regions.append(regions)
             batch_edges.append(edges)
-        return batch_region_embs, batch_edges, batch_regions
+        return batch_region_embs, batch_edges, batch_regions, batch_anorm_idx
 
     @property
     def text_embs(self):
