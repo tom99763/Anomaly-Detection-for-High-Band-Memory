@@ -27,12 +27,23 @@ def build_dirs(config, opt):
     net_type = config['gnn']['net_type']
     share_prompt = config['prompt']['share_prompt']
     linear_probe = config['prompt']['linear_probe']
+    heads = config['gnn']['heads']
+    weighted = config['loss']['weighted']
     file_name = f'{model_name}_{class_name}_{num_prompts}_{num_segments}_{gnn_type}' \
-                f'_{share_prompt}_{linear_probe}_{net_type}'
+                f'_{share_prompt}_{linear_probe}_{net_type}_{heads}_{weighted}'
     config['file_name'] = file_name
 
-    output_dir = f'{opt.output_dir}/{net_type}'
-    ckpt_dir = f'{opt.ckpt_dir}/{net_type}'
+    output_dir = f'{opt.output_dir}/{opt.learning_type}'
+    ckpt_dir = f'{opt.ckpt_dir}/{opt.learning_type}'
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+
+    output_dir = f'{output_dir}/{net_type}'
+    ckpt_dir = f'{ckpt_dir}/{net_type}'
+
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     if not os.path.exists(ckpt_dir):

@@ -19,9 +19,9 @@ class GNN(nn.Module):
             self.gnn3 = GCNConv(64, 640)
 
         elif gnn_type == 'GAT':
-            self.gnn1 = GATConv(640, 64, heads = self.heads)
-            self.gnn2 = GATConv(64, 64, heads = self.heads)
-            self.gnn3 = GATConv(64, 640, heads = self.heads)
+            self.gnn1 = GATConv(640, 64, heads = self.heads, concat=False)
+            self.gnn2 = GATConv(64, 64, heads = self.heads, concat=False)
+            self.gnn3 = GATConv(64, 640, heads = self.heads, concat=False)
     def forward(self, x, edges):
         x = F.relu(self.gnn1(x, edges.T))
         x = F.relu(self.gnn2(x, edges.T))

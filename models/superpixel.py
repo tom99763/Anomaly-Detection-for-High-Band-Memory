@@ -1,7 +1,7 @@
 import numpy as np
 from skimage.segmentation import slic
 import torch
-from torchvision.transforms import Resize
+from torchvision.transforms import Resize, RandomErasing, Lambda, Normalize
 
 def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
     '''
@@ -87,6 +87,23 @@ def region_sampling(x, regions, pad_green=False):
         output.append(xi)
     output = torch.stack(output, dim=0)
     return output
+
+
+mean = torch.tensor([0.485, 0.456, 0.406]).cuda()
+std = torch.tensor([0.229, 0.224, 0.225]).cuda()
+random_augment = Lambda(
+    lambda x: torch.stack(
+        [RandomErasing(p=1, value = torch.rand(1)[0].item())(x_) for x_ in x]))
+normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+def region_augment(regions):
+    N = regions.shape[0]
+    idx = np.random.choice(N, N//2, replace = False)
+    aug_regions = regions[idx] * std[None, :, None, None] +\
+                  mean[None, :, None, None] #(N//2, 3, h, w)
+    aug_regions = random_augment(aug_regions)
+    aug_regions = normalize(aug_regions)
+    regions[idx] = aug_regions
+    return regions, idx
 
 def make_region_labels(regions):
     h, w = regions.shape

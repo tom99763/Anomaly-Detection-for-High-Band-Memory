@@ -36,11 +36,15 @@ class HBMDataModule(L.LightningDataModule):
         train_pass_dir = list(map(lambda x: f'{train_dir}/Pass/{x}',
                                   os.listdir(f'{train_dir}/Pass')))
 
+        '''
         try:
             train_reject_dir = list(map(lambda x: f'{train_dir}/Reject/{x}',
                                         os.listdir(f'{train_dir}/Reject')))
         except:
             train_reject_dir = []
+        '''
+
+        train_reject_dir = []
         self.train_dir = train_pass_dir + train_reject_dir
         self.train_label = [0] * len(train_pass_dir) + [1] * len(train_reject_dir)
         #self.train_dir, self.val_dir, self.train_label, self.val_label = ttp(train_dir, train_label,
@@ -64,9 +68,9 @@ class HBMDataModule(L.LightningDataModule):
                           num_workers=19, shuffle=True, persistent_workers=True)
 
     def val_dataloader(self):
-        return DataLoader(self.ds_test, batch_size=self.batch_size*2,
+        return DataLoader(self.ds_test, batch_size=self.batch_size*4,
                           num_workers=19, persistent_workers=True, shuffle=True)
 
     def test_dataloader(self):
-        return DataLoader(self.ds_test, batch_size=self.batch_size*2,
+        return DataLoader(self.ds_test, batch_size=self.batch_size*4,
                           num_workers=19, persistent_workers=True, shuffle=True)
