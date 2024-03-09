@@ -27,7 +27,7 @@ class RegionClipSemi(L.LightningModule):
             batch_anorm_idx = self.model(x, self.pad_green, True)
         l_cl = margin_contrastive_loss(batch_region_embs, batch_region_nodes,
         batch_region_emb_preds, batch_region_node_preds,
-            batch_anorm_idx, self.model.text_embs, self.config['loss']['weighted'])
+            batch_anorm_idx, self.model.text_embs, self.config['loss']['use_margin'])
         loss = l_cl
         self.log_dict({'loss:': loss.item()},
                       on_epoch=True, prog_bar=True, logger=True)

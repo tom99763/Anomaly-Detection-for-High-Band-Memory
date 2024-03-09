@@ -78,7 +78,7 @@ if __name__ == '__main__':
     gnn_type = ['GAT', 'GCN']
     class_names = ['green dots', 'dots']
     num_segments = [200, 100, 75]
-    net_types = ['gnn', 'linear']
+    net_types = ['gnn']
 
     for net_type in net_types:
         config['gnn']['net_type'] = net_type

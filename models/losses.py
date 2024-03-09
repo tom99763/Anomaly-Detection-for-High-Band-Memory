@@ -63,7 +63,7 @@ def region_wise_cross_entropy(batch_preds):
 
 def margin_contrastive_loss(batch_region_embs, batch_region_nodes,
         batch_region_emb_preds, batch_region_node_preds,
-            batch_anorm_idx, text_embs, weighted=False, temp=0.07):
+            batch_anorm_idx, text_embs, margin=False, temp=0.07):
     batch_size = len(batch_anorm_idx)
     text_embs = F.normalize(text_embs, dim=-1)
     loss = torch.tensor(0.).cuda()
