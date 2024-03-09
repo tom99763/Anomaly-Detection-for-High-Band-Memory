@@ -72,14 +72,12 @@ def main(config, opt):
 if __name__ == '__main__':
     opt = parse_opt()
     config = get_config()
-    main(config, opt)
+    #main(config, opt)
 
-    '''
+
     gnn_type = ['GAT', 'GCN']
-    class_names = ['green dots']
-    #class_names = ['dots', 'black dots', 'green dots']
+    class_names = ['green dots', 'dots']
     num_segments = [200, 100, 75]
-    #num_segments = [75, 100, 200]
     net_types = ['gnn', 'linear']
 
     for net_type in net_types:
@@ -94,5 +92,4 @@ if __name__ == '__main__':
                     for gnn_type_ in gnn_type:
                         config['gnn']['gnn_type'] = gnn_type_
                         main(config, opt)
-    '''
 

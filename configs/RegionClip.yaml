@@ -10,7 +10,7 @@ superpixel:
   sigma: 3
 
 loss:
-  weighted: True
+  use_margin: False
 
 pad:
   pad_green: False

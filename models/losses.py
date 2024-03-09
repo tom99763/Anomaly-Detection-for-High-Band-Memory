@@ -61,7 +61,7 @@ def region_wise_cross_entropy(batch_preds):
         loss += cross_entropy(preds, label)
     return loss/batch_size
 
-def weighted_metric_loss(batch_region_embs, batch_region_nodes,
+def margin_contrastive_loss(batch_region_embs, batch_region_nodes,
         batch_region_emb_preds, batch_region_node_preds,
             batch_anorm_idx, text_embs, weighted=False, temp=0.07):
     batch_size = len(batch_anorm_idx)
