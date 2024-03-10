@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from open_clip.tokenizer import tokenize
 import torch.nn.functional as F
+from .hand_craft_prompt import *
 
 def text_global_pool(x, text= None, pool_type='argmax'):
     if pool_type == 'first':
@@ -41,8 +42,8 @@ class Learned_Prompt(nn.Module):
                 nn.init.normal_(self.anorm_prompt, std=0.02)
 
     def forward(self, x=None, normalize=False):
-        norm_text = f'circle'
-        anorm_text = f'damaged circle'
+        norm_text = f'normal {self.class_name}'
+        anorm_text = f'damaged {self.class_name}'
         norm_embs = self.encode_text(norm_text, normalize)
         anorm_embs = self.encode_text(anorm_text, normalize)
         return norm_embs, anorm_embs

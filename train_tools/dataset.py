@@ -68,9 +68,9 @@ class HBMDataModule(L.LightningDataModule):
                           num_workers=19, shuffle=True, persistent_workers=True)
 
     def val_dataloader(self):
-        return DataLoader(self.ds_test, batch_size=self.batch_size*4,
+        return DataLoader(self.ds_test, batch_size=32,
                           num_workers=19, persistent_workers=True, shuffle=True)
 
     def test_dataloader(self):
-        return DataLoader(self.ds_test, batch_size=self.batch_size*4,
+        return DataLoader(self.ds_test, batch_size=32,
                           num_workers=19, persistent_workers=True, shuffle=True)

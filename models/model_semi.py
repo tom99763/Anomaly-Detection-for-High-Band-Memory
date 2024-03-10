@@ -61,6 +61,7 @@ class RegionClipSemiModel(nn.Module):
         elif self.net_type == 'linear':
             self.nn = NN().to('cuda')
 
+        #self.prompt = Learned_Prompt(config, self.clip).to('cuda')
         self.get_text_embs()
 
     def forward(self, x, pad_green=False, augment = False):
@@ -104,6 +105,7 @@ class RegionClipSemiModel(nn.Module):
                batch_region_emb_preds, batch_region_node_preds, batch_anorm_idx
 
     def get_text_embs(self):
+        #normal_embs, anormal_embs = self.prompt()
         class_name = self.config['clip']['class_name']
         norm_prompts, anorm_prompts = create_prompt_ensemble(class_name)
         mean_norm_prompt = []

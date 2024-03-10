@@ -51,6 +51,10 @@ class RegionClipSemi(L.LightningModule):
         #metrics
         self.auroc.update(batch_preds, y)
         self.aupr.update(batch_preds, y)
+
+        #auroc = self.auroc.compute()
+        #aupr = self.aupr.compute()
+
         self.log_dict({'val_auroc': self.auroc.compute(),
                        'val_aupr': self.aupr.compute(),
                        },
@@ -81,6 +85,10 @@ class RegionClipSemi(L.LightningModule):
         # metrics
         self.auroc.update(batch_preds, y)
         self.aupr.update(batch_preds, y)
+
+        # auroc = self.auroc.compute()
+        # aupr = self.aupr.compute()
+
         self.log_dict({'test_auroc': self.auroc.compute(),
                        'test_aupr': self.aupr.compute(),
                        },
@@ -103,7 +111,7 @@ class RegionClipSemi(L.LightningModule):
             lr=1e-3
         )
         scheduler = optim.lr_scheduler.ExponentialLR(
-            optimizer, 0.8, last_epoch=-1, verbose=True)
+            optimizer, 0.9, last_epoch=-1, verbose=True)
         return {"optimizer": optimizer,"lr_scheduler": scheduler}
 
 
