@@ -108,7 +108,7 @@ def contrastive_loss(batch_region_embs, batch_region_nodes,
 
 def margin_contrastive_loss(batch_region_embs, batch_region_nodes,
         batch_region_emb_preds, batch_region_node_preds,
-            batch_anorm_idx, text_embs, temp=0.07):
+            batch_anorm_idx, text_embs, temp=0.07, step = 0.):
     batch_size = len(batch_anorm_idx)
     text_embs = F.normalize(text_embs, dim=-1)
     loss = torch.tensor(0.).cuda()
@@ -130,24 +130,31 @@ def margin_contrastive_loss(batch_region_embs, batch_region_nodes,
         #nodes similarity
         region_nodes = F.normalize(region_nodes, dim=-1)
         #region_embs = F.normalize(region_embs, dim=-1)
-        #sim_node = region_nodes @ region_nodes.T #(N, N)
-        #sim_node_emb = region_nodes @ region_embs.T
-        #sim_max = torch.maximum(sim_node - sim_node_emb, torch.zeros_like(sim_node).cuda())
+        sim_node = region_nodes @ region_nodes.T #(N, N)
+        #sim_node = region_nodes @ region_embs.T
+        #sim_max = torch.maximum(sim_node - sim_emb, torch.zeros_like(sim_node).cuda())
         #print(sim_max.sum())
-        #sim_max = torch.exp(sim_max / temp) * (1-mask_diag) * (1-mask)
+        sim_node = torch.exp(sim_node / temp) * (1-mask_diag)
+        sim_node_pos = sim_node * mask
 
 
         #text similarity
         sim_text = region_nodes @ text_embs.T
-        sim_text_min = torch.exp(sim_text/temp)
-        sim_text_min = torch.gather(
-            sim_text_min, 1, torch.tensor(label[:, None].clone().detach(), dtype=torch.int64))
+        sim_text = torch.exp(sim_text/temp)
+        sim_text = torch.gather(
+            sim_text, 1, torch.tensor(label[:, None].clone().detach(), dtype=torch.int64))
 
         #loss
-        numerator = sim_text_min #+ sim_min.sum(dim=1)
-        #denomerator = torch.cat([sim_text, sim_max], dim=1).sum(dim=1)
-        #loss_ = -torch.log(numerator / denomerator)
-        loss_ = -torch.log(numerator)
+        if step<16: #warm-up
+            numerator = sim_text
+            loss_ = -torch.log(numerator)
+        else:
+            numerator = sim_text + sim_node_pos.sum(dim=1)
+            denomerator = torch.cat([sim_text, sim_node], dim=1).sum(dim=1)
+            loss_ = -torch.log(numerator / denomerator)
+        #else
+        #numerator = sim_text
+        #loss_ = -torch.log(numerator)
         loss_ = loss_.mean()
         loss += loss_
     loss = loss/batch_size

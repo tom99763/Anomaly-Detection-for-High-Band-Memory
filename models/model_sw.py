@@ -14,35 +14,33 @@ class GNN(nn.Module):
         gnn_type = config['gnn']['gnn_type']
         self.heads = config['gnn']['heads']
         if gnn_type == 'GCN':
-            self.gnn1 = GCNConv(640, 64)
-            self.gnn2 = GCNConv(64, 64)
-            self.gnn3 = GCNConv(64, 640)
+            self.bottleneck = GCNConv(640, 64)
+            #strong
+            self.gnn_s1 = GCNConv(64, 64)
+            self.gnn_s2 = GCNConv(64, 640)
+            #weak
+            self.gnn_w1 = GCNConv(64, 64)
+            self.gnn_w2 = GCNConv(64, 640)
 
         elif gnn_type == 'GAT':
-            self.gnn1 = GATConv(640, 64, heads = self.heads, concat=False)
-            self.gnn2 = GATConv(64, 64, heads = self.heads, concat=False)
-            self.gnn3 = GATConv(64, 640, heads = self.heads, concat=False)
+            self.bottleneck = GATConv(640, 64, heads = self.heads, concat=False)
+            #strong
+            self.gnn_s1 = GATConv(64, 64, heads = self.heads, concat=False)
+            self.gnn_s2 = GATConv(64, 640, heads = self.heads, concat=False)
+            #weak
+            self.gnn_w1 = GATConv(64, 64, heads=self.heads, concat=False)
+            self.gnn_w2 = GATConv(64, 640, heads=self.heads, concat=False)
     def forward(self, x, edges):
-        x = F.relu(self.gnn1(x, edges.T))
-        x = F.relu(self.gnn2(x, edges.T))
-        x = self.gnn3(x, edges.T)
-        return x
+        xb = F.relu(self.bottleneck(x, edges.T))
+        #strong
+        xs = F.relu(self.gnn_s1(xb, edges.T))
+        xs = F.relu(self.gnn_s2(xs, edges.T))
+        #weak
+        xw = F.relu(self.gnn_w1(xb, edges.T))
+        xw = F.relu(self.gnn_w2(xw, edges.T))
+        return xs, xw
 
-class NN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layers = nn.Sequential(
-            nn.Linear(640, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, 640)
-        )
-    def forward(self, x):
-        return self.layers(x)
-
-
-class RegionClipSemiModel(nn.Module):
+class RegionClipSWModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -57,59 +55,56 @@ class RegionClipSemiModel(nn.Module):
         for param in self.clip.parameters():
             param.requires_grad = False
         self.clip = self.clip.to('cuda')
-        if self.net_type == 'gnn':
-            self.gnn = GNN(config).to('cuda')
-        elif self.net_type == 'linear':
-            self.nn = NN().to('cuda')
+        self.gnn = GNN(config).to('cuda')
 
         #self.prompt = Learned_Prompt(config, self.clip).to('cuda')
         self.get_text_embs()
-
-        self.step = 0.
+        self.temp = self.config['clip']['temp']
 
     def forward(self, x, pad_green=False, augment = False):
-        self.step+=1
         x = x.cuda()
-        batch_size = x.shape[0]
 
-        batch_region_embs, batch_edges, \
-        batch_regions, batch_anorm_idx = self.get_region_embs(x, pad_green, augment)
+        #strong
+        batch_region_embs_s, batch_edges_s, \
+        batch_regions_s, batch_anorm_idx_s = self.get_region_embs(x, pad_green, augment, 'strong')
 
+        #weak
+        batch_region_embs_w, batch_edges_w, \
+        batch_regions_w, batch_anorm_idx_w = self.get_region_embs(x, pad_green, augment, 'weak')
+
+        #text emb
         text_embs = F.normalize(self.text_embs).to(x.device) #(2, 640)
-        temp = self.config['clip']['temp']
 
-        batch_region_node_preds = []
-        batch_region_emb_preds = []
-        batch_region_nodes = []
+        #strong pred
+        batch_region_node_preds_ss, batch_region_node_preds_sw = self.node_predict(
+            batch_region_embs_s, batch_edges_s, text_embs
+        )
+        #weak pred
+        batch_region_node_preds_ws, batch_region_node_preds_ww = self.node_predict(
+            batch_region_embs_w, batch_edges_w, text_embs
+        )
+        s_pred = (batch_region_node_preds_ss, batch_region_node_preds_sw, batch_anorm_idx_s)
+        w_pred = (batch_region_node_preds_ws, batch_region_node_preds_ww, batch_anorm_idx_w)
+        return s_pred, w_pred
 
+    def node_predict(self, batch_region_embs, batch_edges, text_embs):
+        batch_size = len(batch_region_embs)
+        batch_region_node_preds_s = []
+        batch_region_node_preds_w = []
         for i in range(batch_size):
-            region_embs = batch_region_embs[i].to(x.device) #(N, d)
-            edges = batch_edges[i].to(x.device)
-            if self.net_type == 'gnn':
-                region_nodes = self.gnn(region_embs, edges)
-            elif self.net_type == 'linear':
-                region_nodes = self.nn(region_embs)
-            else:
-                raise  Exception('invalid net_type')
-
-            batch_region_nodes.append(region_nodes)
-
-            #emb prediction
-            region_embs = F.normalize(region_embs, dim=1)
-            emb_pred = region_embs @ text_embs.T / temp  # (N, 2)
-
-            #node prediction
-            region_nodes = F.normalize(region_nodes, dim=1)
-            node_pred = region_nodes @ text_embs.T / temp  # (N, 2)
-
-            batch_region_node_preds.append(node_pred)
-            batch_region_emb_preds.append(emb_pred)
-
-        return batch_region_embs, batch_region_nodes, \
-               batch_region_emb_preds, batch_region_node_preds, batch_anorm_idx
+            region_embs = batch_region_embs[i].cuda()  # (N, d)
+            edges = batch_edges[i].cuda()
+            region_nodes_s, region_nodes_w = self.gnn(region_embs, edges)
+            # node prediction
+            region_nodes_s = F.normalize(region_nodes_s, dim=1)
+            node_pred_s = region_nodes_s @ text_embs.T / self.temp  # (N, 2)
+            region_nodes_w = F.normalize(region_nodes_w, dim=1)
+            node_pred_w = region_nodes_w @ text_embs.T / self.temp  # (N, 2)
+            batch_region_node_preds_s.append(node_pred_s)
+            batch_region_node_preds_w.append(node_pred_w)
+        return batch_region_node_preds_s, batch_region_node_preds_w
 
     def get_text_embs(self):
-        #normal_embs, anormal_embs = self.prompt()
         class_name = self.config['clip']['class_name']
         norm_prompts, anorm_prompts = create_prompt_ensemble(class_name)
         mean_norm_prompt = []
@@ -126,7 +121,7 @@ class RegionClipSemiModel(nn.Module):
         mean_anorm_prompt = torch.cat(mean_anorm_prompt, dim=0).mean(dim=0) #(640, )
         self._text_embs = torch.stack([mean_norm_prompt, mean_anorm_prompt], dim=0) #(2, 640)
 
-    def get_region_embs(self, x, pad_green=False, augment=False):
+    def get_region_embs(self, x, pad_green=False, augment=False, augment_type=None):
         batch_size = x.shape[0]
         batch_region_embs = []
         batch_regions = []
@@ -139,7 +134,7 @@ class RegionClipSemiModel(nn.Module):
                 x_i, **self.config['superpixel'])
             x_i = region_sampling(x_i, regions, pad_green)  # (N, 3, h, w)
             if augment:
-                x_i, idx = region_augment(x_i, self.pad_green)
+                x_i, idx = region_augment(x_i, self.pad_green, augment_type)
                 batch_anorm_idx.append(idx)
             region_embs = self.clip.encode_image(x_i)  # (N, d)
             region_embs = region_embs.view(-1, region_embs.shape[-1])
