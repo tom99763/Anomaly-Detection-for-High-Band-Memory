@@ -48,6 +48,7 @@ class RegionClipSemiModel(nn.Module):
         self.config = config
         self.level = config['gnn']['level']
         self.linear_probe = config['prompt']['linear_probe']
+        self.pad_green = self.config['pad']['pad_green']
         self.net_type = config['gnn']['net_type']
         self.clip, _, self._transform = create_model_and_transforms(
             model_name=config['clip']['model_name'],
@@ -135,7 +136,7 @@ class RegionClipSemiModel(nn.Module):
                 x_i, **self.config['superpixel'])
             x_i = region_sampling(x_i, regions, pad_green)  # (N, 3, h, w)
             if augment:
-                x_i, idx = region_augment(x_i)
+                x_i, idx = region_augment(x_i, self.pad_green)
                 batch_anorm_idx.append(idx)
             region_embs = self.clip.encode_image(x_i)  # (N, d)
             region_embs = region_embs.view(-1, region_embs.shape[-1])

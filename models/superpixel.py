@@ -54,6 +54,9 @@ def region_sampling(x, regions):
     return output
 """
 
+
+
+
 def region_sampling(x, regions, pad_green=False):
     '''
     :param x: (3, h, w)
@@ -89,17 +92,50 @@ def region_sampling(x, regions, pad_green=False):
     return output
 
 
-mean = torch.tensor([0.485, 0.456, 0.406]).cuda()
-std = torch.tensor([0.229, 0.224, 0.225]).cuda()
-random_augment = Lambda(
-    lambda x: torch.stack(
-        [RandomErasing(p=1, value = torch.rand(1)[0].item())(x_) for x_ in x]))
+mean = torch.tensor([0.485, 0.456, 0.406])
+std = torch.tensor([0.229, 0.224, 0.225])
 normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-def region_augment(regions):
+
+
+def green_object_sample():
+    random_augment = Lambda(
+        lambda x: torch.stack(
+            [RandomErasing(
+                p=1,
+                value=[-1.7923,
+                       torch.distributions.uniform.Uniform(0.5, 1.).sample().item(),
+                       -1.4802
+                       ],
+                scale=(0.01, 0.05),
+                ratio=(0.7, 1.0)
+            )(x_) \
+             for x_ in x]))
+    return random_augment
+
+def black_object_sample():
+    random_augment = Lambda(
+        lambda x: torch.stack(
+            [RandomErasing(
+                p=1,
+                value=[-1.7923,
+                       -1.8078,
+                       -1.4802
+                       ],
+                scale=(0.01, 0.05),
+                ratio=(0.7, 1.0)
+            )(x_) \
+             for x_ in x]))
+    return random_augment
+
+def region_augment(regions, pad_green):
     N = regions.shape[0]
     idx = np.random.choice(N, N//2, replace = False)
     aug_regions = regions[idx] * std[None, :, None, None] +\
                   mean[None, :, None, None] #(N//2, 3, h, w)
+    if pad_green:
+        random_augment = black_object_sample()
+    else:
+        random_augment = green_object_sample()
     aug_regions = random_augment(aug_regions)
     aug_regions = normalize(aug_regions)
     regions[idx] = aug_regions

@@ -13,7 +13,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_dir', type=str, default='../datasets/HBM/HBM-AfterManualJudge/type2')
+    parser.add_argument('--dataset_dir', type=str, default='../datasets/HBM/HBM-AfterManualJudge/type3')
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--val_ratio', type=float, default=0.4)
