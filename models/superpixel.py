@@ -92,8 +92,8 @@ def region_sampling(x, regions, pad_green=False):
     return output
 
 
-mean = torch.tensor([0.485, 0.456, 0.406])
-std = torch.tensor([0.229, 0.224, 0.225])
+mean = torch.tensor([0.485, 0.456, 0.406]).cuda()
+std = torch.tensor([0.229, 0.224, 0.225]).cuda()
 normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 
@@ -106,8 +106,8 @@ def green_object_sample():
                        torch.distributions.uniform.Uniform(0.5, 1.).sample().item(),
                        -1.4802
                        ],
-                scale=(0.01, 0.05),
-                ratio=(0.7, 1.0)
+                scale=(0.01, 0.2),
+                ratio=(0.3, 3.3)
             )(x_) \
              for x_ in x]))
     return random_augment
@@ -117,12 +117,9 @@ def black_object_sample():
         lambda x: torch.stack(
             [RandomErasing(
                 p=1,
-                value=[-1.7923,
-                       -1.8078,
-                       -1.4802
-                       ],
-                scale=(0.01, 0.05),
-                ratio=(0.7, 1.0)
+                value=[-2.1179, -1.8078, -1.8044],
+                scale=(0.01, 0.2),
+                ratio=(0.3, 3.3)
             )(x_) \
              for x_ in x]))
     return random_augment
