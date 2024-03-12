@@ -14,6 +14,7 @@ class RegionClipCT(L.LightningModule):
         self.config = config
         self.pad_green = config['pad']['pad_green']
         self.use_margin = config['loss']['use_margin']
+        self.beta = config['loss']['beta']
 
         #metrics
         self.auroc = AUROC()
@@ -34,7 +35,7 @@ class RegionClipCT(L.LightningModule):
                 batch_region_node_preds_aug,
                 batch_unlabeled_idx
             )
-            loss = 5. * l_c + l_div
+            loss = self.beta * l_c + l_div
             l_ce = torch.tensor(0.)
         else:
             batch_region_node_preds, batch_region_nodes, \
@@ -48,7 +49,7 @@ class RegionClipCT(L.LightningModule):
                 batch_unlabeled_idx
             )
             l_ce = cross_entropy_loss(batch_region_node_preds, batch_unlabeled_idx)
-            loss = l_ce + 5. * l_c
+            loss = l_ce + self.beta * l_c
 
         self.step+=1
         self.log_dict({'loss:': loss.item(),

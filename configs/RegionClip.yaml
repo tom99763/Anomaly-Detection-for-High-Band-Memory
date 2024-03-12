@@ -11,6 +11,7 @@ superpixel:
 
 loss:
   use_margin: True
+  beta: 1.
 
 pad:
   pad_green: False

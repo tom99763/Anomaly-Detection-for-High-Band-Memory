@@ -135,7 +135,7 @@ def black_object_sample():
 def strong_augment():
     random_augment = Lambda(
         lambda x: torch.stack(
-            [RandomErasing(p=1, value=torch.rand(1)[0].item())(x_) for x_ in x]))
+            [RandomErasing(p=0.8, value=torch.rand(1)[0].item())(x_) for x_ in x]))
     return random_augment
 
 
