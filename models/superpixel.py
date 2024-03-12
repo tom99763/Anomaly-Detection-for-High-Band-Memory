@@ -1,7 +1,8 @@
 import numpy as np
 from skimage.segmentation import slic
 import torch
-from torchvision.transforms import Resize, RandomErasing, Lambda, Normalize
+import torchvision.transforms as transforms
+from torchvision.transforms import Resize, RandomErasing, Lambda, Normalize, ColorJitter, Grayscale
 
 def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
     '''
@@ -53,8 +54,6 @@ def region_sampling(x, regions):
     output = torch.stack(output, dim=0)
     return output
 """
-
-
 
 
 def region_sampling(x, regions, pad_green=False):
@@ -110,6 +109,17 @@ def green_object_sample():
              for x_ in x]))
     return random_augment
 
+def get_color_distortion(s=1.0):
+    color_jitter = transforms.ColorJitter(0.8*s, 0.8*s, 0.8*s, 0.2*s)
+    rnd_color_jitter = transforms.RandomApply([color_jitter], p=0.5)
+    rnd_gray = transforms.RandomGrayscale(p=0.5)
+    color_distort = transforms.Compose([
+        rnd_color_jitter,
+        rnd_gray])
+    random_augment = Lambda(
+        lambda x: torch.stack(
+            [color_distort(x_) for x_ in x]))
+    return random_augment
 def black_object_sample():
     random_augment = Lambda(
         lambda x: torch.stack(
@@ -141,6 +151,9 @@ def region_augment(regions, pad_green, augment_type='strong'):
             random_augment = green_object_sample()
     elif augment_type == 'strong':
         random_augment = strong_augment()
+
+    elif augment_type == 'color':
+        random_augment = get_color_distortion()
     else:
         raise  Exception('specify augment_type')
     aug_regions = random_augment(aug_regions)

@@ -3,6 +3,7 @@ import torch.cuda
 from utils import *
 from models.trainer import *
 from models.trainer_semi import *
+from models.trainr_ct import *
 from train_tools.dataset import *
 from train_tools.metrics import *
 from train_tools.callbacks import *
@@ -33,7 +34,7 @@ def main(config, opt):
         if opt.learning_type == 'sup':
             model = RegionClip.load_from_checkpoint(config['ckpt_dir'], config=config)
         elif opt.learning_type == 'semi_sup':
-            model = RegionClipSemi.load_from_checkpoint(config['ckpt_dir'], config=config)
+            model = RegionClipCT.load_from_checkpoint(config['ckpt_dir'], config=config)
         else:
             raise Exception('specify training type')
         print('load weights successfully')
@@ -41,7 +42,7 @@ def main(config, opt):
         if opt.learning_type == 'sup':
             model = RegionClip(config)
         elif opt.learning_type== 'semi_sup':
-            model = RegionClipSemi(config)
+            model = RegionClipCT(config)
         else:
             raise Exception('specify training type')
         print('no weights')

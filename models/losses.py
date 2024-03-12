@@ -7,31 +7,6 @@ cross_entropy = nn.CrossEntropyLoss()
 
 mse = nn.MSELoss()
 
-class FocalLoss(nn.Module):
-    def __init__(self, gamma=2., alpha=None, size_average=False):
-        super(FocalLoss, self).__init__()
-        self.gamma = gamma
-        self.alpha = alpha
-        if self.alpha is not None:
-            self.alpha = torch.Tensor([alpha, 1-alpha])
-        self.size_average = size_average
-    def forward(self, input, target):
-        target = target.view(-1,1)
-        logpt = F.log_softmax(input)
-        logpt = logpt.gather(1, target)
-        logpt = logpt.view(-1)
-        pt = logpt.exp()
-        if self.alpha is not None:
-            if self.alpha.type()!=input.data.type():
-                self.alpha = self.alpha.type_as(input.data)
-            at = self.alpha.gather(0, target.view(-1))
-            logpt = logpt * at
-        loss = -1 * (1-pt)**self.gamma * logpt
-        if self.size_average:
-            return loss.mean()
-        else:
-            return loss.sum()
-
 
 def prior_cross_entropy(batch_preds, batch_regions):
     batch_size = len(batch_preds)
@@ -145,7 +120,7 @@ def margin_contrastive_loss(batch_region_embs, batch_region_nodes,
             sim_text, 1, torch.tensor(label[:, None].clone().detach(), dtype=torch.int64))
 
         #loss
-        if step<16: #warm-up
+        if step<0: #warm-up
             numerator = sim_text
             loss_ = -torch.log(numerator)
         else:
@@ -159,4 +134,55 @@ def margin_contrastive_loss(batch_region_embs, batch_region_nodes,
         loss += loss_
     loss = loss/batch_size
     return loss
+
+def cross_entropy_loss(batch_pred, batch_unlabeled_idx):
+    batch_size = len(batch_pred)
+    l_ce = torch.tensor(0.).cuda()
+    for i in range(batch_size):
+        unlabeled_idx = batch_unlabeled_idx[i].tolist()
+        pred = batch_pred[i]
+        N=pred.shape[0]
+        idx = torch.arange(0, N).tolist()
+        labeled_idx = list(set(idx)-set(unlabeled_idx))
+        labeled_pred = pred[labeled_idx]
+        label = torch.zeros(N,).cuda().long()
+        l_ce += cross_entropy(labeled_pred, label)
+    return l_ce/batch_size
+
+def div_consistency_loss(batch_h, batch_h_aug,
+                     batch_pred, batch_pred_aug,
+                     batch_unlabeled_idx):
+    batch_size = len(batch_h)
+    l_c = torch.tensor(0.).cuda()
+    l_div = torch.tensor(0.).cuda()
+    for i in range(batch_size):
+        h = batch_h[i]
+        h_aug = batch_h_aug[i]
+        pred = batch_pred[i]
+        pred_aug = batch_pred_aug[i]
+        unlabeled_idx = batch_unlabeled_idx[i]
+
+        #consistency
+        unlabeled_pred = pred[unlabeled_idx]
+        unlabeled_pred_aug = pred_aug[unlabeled_idx]
+        label = unlabeled_pred.argmax(dim=-1)
+        label_aug = unlabeled_pred_aug.argmax(dim=-1)
+        c_idx = label == label_aug
+        if c_idx.float().sum()==0.:
+            continue
+        logits_aug = unlabeled_pred_aug[c_idx]
+        label = label.long()
+        l_c += cross_entropy(logits_aug, label)
+
+        #diversity
+        unlabeled_h = h[unlabeled_idx]
+        unlabeled_h = unlabeled_h[c_idx]
+        unlabeled_h_aug = h_aug[unlabeled_idx]
+        unlabeled_h_aug = unlabeled_h_aug[c_idx]
+        l_div = l_div - mse(unlabeled_h, unlabeled_h_aug)
+    return l_c/batch_size, l_div/batch_size
+
+
+
+
 

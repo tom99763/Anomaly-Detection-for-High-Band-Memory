@@ -19,8 +19,10 @@ class RegionClipSemi(L.LightningModule):
         #metrics
         self.auroc = AUROC()
         self.aupr = AUPR()
+        self.step = 0.
 
     def training_step(self, batch, batch_idx):
+        self.step += 1
         self.train()
         x, y = batch
         batch_region_embs, batch_region_nodes, \
@@ -28,7 +30,7 @@ class RegionClipSemi(L.LightningModule):
             batch_anorm_idx = self.model(x, self.pad_green, True)
         l_cl = self.loss_func(batch_region_embs, batch_region_nodes,
         batch_region_emb_preds, batch_region_node_preds,
-            batch_anorm_idx, self.model.text_embs, step = self.model.step)
+            batch_anorm_idx, self.model.text_embs, step = self.step)
         loss = l_cl
         self.log_dict({'loss:': loss.item()},
                       on_epoch=True, prog_bar=True, logger=True)
@@ -111,7 +113,7 @@ class RegionClipSemi(L.LightningModule):
             lr=1e-3
         )
         scheduler = optim.lr_scheduler.ExponentialLR(
-            optimizer, 0.9, last_epoch=-1, verbose=True)
+            optimizer, 0.8, last_epoch=-1, verbose=True)
         return {"optimizer": optimizer,"lr_scheduler": scheduler}
 
 
