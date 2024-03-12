@@ -48,37 +48,35 @@ class GNN(nn.Module):
         x = self.gnn3(x, edges.T)
         return x
 
-
-class NoiseInjection(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.alpha = Variable(torch.tensor(0.1), requires_grad= True)
-
-    def forward(self, x):
-        device = x.device
-        return x + torch.randn(x.shape) * self.alpha.to(x.device)
-
-
-class DimMasking(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return
-
-
 class NN(nn.Module):
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(
             nn.Linear(640, 64),
             nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
             nn.Linear(64, 640)
         )
     def forward(self, x):
         return self.layers(x)
+
+
+class DimMasking(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.attn = NN()
+        self.drop_ratio = 0.05
+        self.temp = 0.07
+    def forward(self, x):
+        h = self.attn(x)
+        d = h.shape[-1]
+        hhat = torch.zeros_like(h).cuda()
+        for i in range(int(d*self.drop_ratio)):
+            m= 1-hhat
+            mhat = torch.log(m+1e-7)
+            y=(-h+mhat)/self.temp
+            yhat = y.softmax(dim=-1)
+            hhat = hhat + yhat * m
+        return (1-hhat) * x
 
 
 class RegionClipCTModel(nn.Module):
@@ -101,7 +99,8 @@ class RegionClipCTModel(nn.Module):
         elif self.net_type == 'linear':
             self.nn = NN().to('cuda')
 
-        self.noise_inject = NoiseInjection()
+        #self.noise_inject = NoiseInjection()
+        self.noise_inject = DimMasking()
         self.get_text_embs()
 
     def forward(self, x, pad_green=False, generate_unlabeled= False, augment=False):
@@ -190,7 +189,7 @@ class RegionClipCTModel(nn.Module):
                 x_i, **self.config['superpixel'])
             x_i = region_sampling(x_i, regions, pad_green)  # (N, 3, h, w)
             if generate_unlabeled:
-                x_i, idx = region_augment(x_i, self.pad_green)
+                x_i, idx = region_augment(x_i, self.pad_green, 'color')
                 batch_unlabeled_idx.append(idx)
             region_embs = self.clip.encode_image(x_i)  # (N, d)
             region_embs = region_embs.view(-1, region_embs.shape[-1])

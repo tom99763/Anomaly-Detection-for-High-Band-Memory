@@ -146,7 +146,7 @@ def cross_entropy_loss(batch_pred, batch_unlabeled_idx):
         labeled_idx = list(set(idx)-set(unlabeled_idx))
         labeled_pred = pred[labeled_idx]
         label = torch.zeros(N,).cuda().long()
-        l_ce += cross_entropy(labeled_pred, label)
+        l_ce += cross_entropy(labeled_pred, label[labeled_idx])
     return l_ce/batch_size
 
 def div_consistency_loss(batch_h, batch_h_aug,
@@ -169,9 +169,10 @@ def div_consistency_loss(batch_h, batch_h_aug,
         label_aug = unlabeled_pred_aug.argmax(dim=-1)
         c_idx = label == label_aug
         if c_idx.float().sum()==0.:
-            continue
+            l_c += mse(pred, pred)
+            l_div += mse(pred, pred)
         logits_aug = unlabeled_pred_aug[c_idx]
-        label = label.long()
+        label = label[c_idx].long()
         l_c += cross_entropy(logits_aug, label)
 
         #diversity
