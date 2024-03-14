@@ -20,7 +20,7 @@ def parse_opt():
     parser.add_argument('--val_ratio', type=float, default=0.4)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=50)
-    parser.add_argument('--mode', type=str, default='test')
+    parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--learning_type', type=str, default='semi_sup')
     opt, _ = parser.parse_known_args()
     return opt
@@ -43,7 +43,7 @@ def main(config, opt):
     else:
         if opt.learning_type == 'sup':
             model = RegionClip(config)
-        elif opt.learning_type== 'semi_sup':
+        elif opt.learning_type == 'semi_sup':
             model = RegionClipSemi(config)
         elif opt.learning_type == 'consistent':
             model = RegionClipCT(config)
