@@ -105,12 +105,12 @@ def margin_contrastive_loss(batch_region_embs, batch_region_nodes,
         #nodes similarity
         region_nodes = F.normalize(region_nodes, dim=-1)
         #region_embs = F.normalize(region_embs, dim=-1)
-        sim_node = region_nodes @ region_nodes.T #(N, N)
+        #sim_node = region_nodes @ region_nodes.T #(N, N)
         #sim_node = region_nodes @ region_embs.T
         #sim_max = torch.maximum(sim_node - sim_emb, torch.zeros_like(sim_node).cuda())
         #print(sim_max.sum())
-        sim_node = torch.exp(sim_node / temp) * (1-mask_diag)
-        sim_node_pos = sim_node * mask
+        #sim_node = torch.exp(sim_node / temp) * (1-mask_diag)
+        #sim_node_pos = sim_node * mask
 
 
         #text similarity
@@ -120,16 +120,8 @@ def margin_contrastive_loss(batch_region_embs, batch_region_nodes,
             sim_text, 1, torch.tensor(label[:, None].clone().detach(), dtype=torch.int64))
 
         #loss
-        if step<0: #warm-up
-            numerator = sim_text
-            loss_ = -torch.log(numerator)
-        else:
-            numerator = sim_text + sim_node_pos.sum(dim=1)
-            denomerator = torch.cat([sim_text, sim_node], dim=1).sum(dim=1)
-            loss_ = -torch.log(numerator / denomerator)
-        #else
-        #numerator = sim_text
-        #loss_ = -torch.log(numerator)
+        numerator = sim_text
+        loss_ = -torch.log(numerator)
         loss_ = loss_.mean()
         loss += loss_
     loss = loss/batch_size

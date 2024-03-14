@@ -14,13 +14,13 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_dir', type=str, default='../datasets/HBM/HBM-AfterManualJudge/type3')
+    parser.add_argument('--dataset_dir', type=str, default='../datasets/HBM/HBM-AfterManualJudge/type2')
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--val_ratio', type=float, default=0.4)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=50)
-    parser.add_argument('--mode', type=str, default='train')
+    parser.add_argument('--mode', type=str, default='test')
     parser.add_argument('--learning_type', type=str, default='semi_sup')
     opt, _ = parser.parse_known_args()
     return opt
@@ -34,6 +34,8 @@ def main(config, opt):
         if opt.learning_type == 'sup':
             model = RegionClip.load_from_checkpoint(config['ckpt_dir'], config=config)
         elif opt.learning_type == 'semi_sup':
+            model = RegionClipSemi.load_from_checkpoint(config['ckpt_dir'], config=config)
+        elif opt.learning_type == 'consistent':
             model = RegionClipCT.load_from_checkpoint(config['ckpt_dir'], config=config)
         else:
             raise Exception('specify training type')
@@ -42,6 +44,8 @@ def main(config, opt):
         if opt.learning_type == 'sup':
             model = RegionClip(config)
         elif opt.learning_type== 'semi_sup':
+            model = RegionClipSemi(config)
+        elif opt.learning_type == 'consistent':
             model = RegionClipCT(config)
         else:
             raise Exception('specify training type')
@@ -73,13 +77,13 @@ def main(config, opt):
 if __name__ == '__main__':
     opt = parse_opt()
     config = get_config()
-    main(config, opt)
+    #main(config, opt)
 
-    '''
+
     gnn_type = ['GAT', 'GCN']
     class_names = ['black dots', 'dots']
     num_segments = [200, 100, 75]
-    net_types = ['gnn', 'linear']
+    net_types = ['gnn']
 
     for net_type in net_types:
         config['gnn']['net_type'] = net_type
@@ -87,11 +91,7 @@ if __name__ == '__main__':
             config['superpixel']['numSegments'] = num_segments_
             for class_name in class_names:
                 config['clip']['class_name'] = class_name
-                if net_type != 'gnn':
+                for gnn_type_ in gnn_type:
+                    config['gnn']['gnn_type'] = gnn_type_
                     main(config, opt)
-                else:
-                    for gnn_type_ in gnn_type:
-                        config['gnn']['gnn_type'] = gnn_type_
-                        main(config, opt)
-    '''
 
