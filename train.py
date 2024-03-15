@@ -20,8 +20,8 @@ def parse_opt():
     parser.add_argument('--val_ratio', type=float, default=0.4)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=50)
-    parser.add_argument('--mode', type=str, default='train')
-    parser.add_argument('--learning_type', type=str, default='semi_sup')
+    parser.add_argument('--mode', type=str, default='test')
+    parser.add_argument('--learning_type', type=str, default='consistent')
     opt, _ = parser.parse_known_args()
     return opt
 
@@ -77,9 +77,9 @@ def main(config, opt):
 if __name__ == '__main__':
     opt = parse_opt()
     config = get_config()
-    #main(config, opt)
+    main(config, opt)
 
-
+    '''
     gnn_type = ['GAT', 'GCN']
     class_names = ['black dots', 'dots']
     num_segments = [200, 100, 75]
@@ -94,4 +94,5 @@ if __name__ == '__main__':
                 for gnn_type_ in gnn_type:
                     config['gnn']['gnn_type'] = gnn_type_
                     main(config, opt)
+    '''
 

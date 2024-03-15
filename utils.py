@@ -14,8 +14,9 @@ def set_seed(seed=42, loader=None):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-def get_config():
-    config_path = './configs/RegionClip.yaml'
+def get_config(config_path=None):
+    if config_path is None:
+        config_path = './configs/RegionClip.yaml'
     with open(config_path, 'r') as stream:
         return yaml.load(stream, Loader=yaml.FullLoader)
 def build_dirs(config, opt):
@@ -27,9 +28,18 @@ def build_dirs(config, opt):
     beta = config['loss']['beta']
     file_name = f'{model_name}_{class_name}_{num_segments}_{gnn_type}_{beta}'
     config['file_name'] = file_name
+    type_ = opt.dataset_dir.split('/')[-1]
 
     output_dir = f'{opt.output_dir}/{opt.learning_type}'
     ckpt_dir = f'{opt.ckpt_dir}/{opt.learning_type}'
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+
+    output_dir = f'{output_dir}/{type_}'
+    ckpt_dir = f'{ckpt_dir}/{type_}'
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
