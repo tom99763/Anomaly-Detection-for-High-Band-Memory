@@ -76,7 +76,8 @@ class DimMasking(nn.Module):
             y=(-h+mhat)/self.temp
             yhat = y.softmax(dim=-1)
             hhat = hhat + yhat * m
-        return (1-hhat) * x
+        self.mask = (1-hhat)
+        return self.mask * x
 
 
 class RegionClipCTModel(nn.Module):
