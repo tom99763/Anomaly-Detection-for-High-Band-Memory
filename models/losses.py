@@ -141,12 +141,16 @@ def cross_entropy_loss(batch_pred, batch_unlabeled_idx):
         l_ce += cross_entropy(labeled_pred, label[labeled_idx])
     return l_ce/batch_size
 
+def entropy(p):
+    return (-p*p.log()).sum(dim=-1).mean()
+
 def div_consistency_loss(batch_h, batch_h_aug,
                      batch_pred, batch_pred_aug,
-                     batch_unlabeled_idx):
+                     batch_unlabeled_idx, tn, ta):
     batch_size = len(batch_h)
     l_c = torch.tensor(0.).cuda()
     l_div = torch.tensor(0.).cuda()
+    l_ent = torch.tensor(0.).cuda()
     for i in range(batch_size):
         h = batch_h[i]
         h_aug = batch_h_aug[i]
@@ -157,15 +161,15 @@ def div_consistency_loss(batch_h, batch_h_aug,
         #consistency
         unlabeled_pred = pred[unlabeled_idx]
         unlabeled_pred_aug = pred_aug[unlabeled_idx]
+        prob = unlabeled_pred.softmax(dim=-1)
         label = unlabeled_pred.argmax(dim=-1)
+        #c_idx = torch.logical_or(prob[:, 0]>tn, prob[:, 1]>ta)
         label_aug = unlabeled_pred_aug.argmax(dim=-1)
         c_idx = label == label_aug
-        if c_idx.float().sum()==0.:
-            l_c += mse(pred, pred)
-            l_div += mse(pred, pred)
         logits_aug = unlabeled_pred_aug[c_idx]
         label = label[c_idx].long()
         l_c += cross_entropy(logits_aug, label)
+        l_ent += entropy(prob)
 
         #diversity
         unlabeled_h = h[unlabeled_idx]
@@ -173,6 +177,32 @@ def div_consistency_loss(batch_h, batch_h_aug,
         unlabeled_h_aug = h_aug[unlabeled_idx]
         unlabeled_h_aug = unlabeled_h_aug[c_idx]
         l_div = l_div - mse(unlabeled_h, unlabeled_h_aug)
+    return l_c/batch_size, l_div/batch_size, l_ent/batch_size
+
+
+
+def div_consistency_loss_(batch_h, batch_h_aug,
+                     batch_pred, batch_pred_aug):
+    batch_size = len(batch_h)
+    l_c = torch.tensor(0.).cuda()
+    l_div = torch.tensor(0.).cuda()
+    for i in range(batch_size):
+        h = batch_h[i]
+        h_aug = batch_h_aug[i]
+        pred = batch_pred[i]
+        pred_aug = batch_pred_aug[i]
+
+        #consistency
+        label = pred.argmax(dim=-1)
+        label_aug = pred_aug.argmax(dim=-1)
+        #c_idx = label == label_aug
+        #logits_aug = pred_aug[c_idx]
+        #label = label[c_idx].long()
+        label = label.long()
+        l_c += cross_entropy(pred_aug, label)
+
+        #diversity
+        l_div = l_div - mse(h, h_aug)
     return l_c/batch_size, l_div/batch_size
 
 

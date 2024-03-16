@@ -34,14 +34,14 @@ class GNN(nn.Module):
         gnn_type = config['gnn']['gnn_type']
         self.heads = config['gnn']['heads']
         if gnn_type == 'GCN':
-            self.gnn1 = GCNConv(640, 64)
-            self.gnn2 = GCNConv(64, 64)
-            self.gnn3 = GCNConv(64, 640)
+            self.gnn1 = GCNConv(640, 16)
+            self.gnn2 = GCNConv(16, 16)
+            self.gnn3 = GCNConv(16, 640)
 
         elif gnn_type == 'GAT':
-            self.gnn1 = GATConv(640, 64, heads = self.heads, concat=False)
-            self.gnn2 = GATConv(64, 64, heads = self.heads, concat=False)
-            self.gnn3 = GATConv(64, 640, heads = self.heads, concat=False)
+            self.gnn1 = GATConv(640, 16, heads = self.heads, concat=False)
+            self.gnn2 = GATConv(16, 16, heads = self.heads, concat=False)
+            self.gnn3 = GATConv(16, 640, heads = self.heads, concat=False)
     def forward(self, x, edges):
         x = F.relu(self.gnn1(x, edges.T))
         x = F.relu(self.gnn2(x, edges.T))
@@ -52,9 +52,9 @@ class NN(nn.Module):
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(
-            nn.Linear(640, 64),
+            nn.Linear(640, 16),
             nn.ReLU(),
-            nn.Linear(64, 640)
+            nn.Linear(16, 640)
         )
     def forward(self, x):
         return self.layers(x)
@@ -80,15 +80,12 @@ class DimMasking(nn.Module):
         return self.mask * x
 
 
-class RegionClipCTModel(nn.Module):
+class RegionClipMaskModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.level = config['gnn']['level']
-        self.linear_probe = config['prompt']['linear_probe']
         self.pad_green = self.config['pad']['pad_green']
         self.net_type = config['gnn']['net_type']
-        self.p = config['loss']['p']
         self.clip, _, self._transform = create_model_and_transforms(
             model_name=config['clip']['model_name'],
             pretrained=config['clip']['pretrained']
@@ -105,7 +102,7 @@ class RegionClipCTModel(nn.Module):
         self.noise_inject = DimMasking(config)
         self.get_text_embs()
 
-    def forward(self, x, pad_green=False, generate_unlabeled= False, augment=False):
+    def forward(self, x, pad_green=False, augment=False):
         if augment:
             for params in self.gnn.parameters():
                 params.requires_grad=False
@@ -119,8 +116,7 @@ class RegionClipCTModel(nn.Module):
 
         x = x.cuda()
         batch_size = x.shape[0]
-        batch_region_embs, batch_edges, \
-        batch_regions, batch_unlabeled_idx = self.get_region_embs(x, pad_green, generate_unlabeled)
+        batch_region_embs, batch_edges, batch_regions = self.get_region_embs(x, pad_green)
 
         text_embs = F.normalize(self.text_embs).to(x.device)  # (2, 640)
         temp = self.config['clip']['temp']
@@ -143,21 +139,19 @@ class RegionClipCTModel(nn.Module):
             node_pred = region_nodes @ text_embs.T / temp  # (N, 2)
             batch_region_node_preds.append(node_pred)
 
-            #augment
-            if generate_unlabeled:
-                idx = batch_unlabeled_idx[i]
-                region_embs_aug = region_embs.clone()
-                region_embs_aug[idx] = self.noise_inject(region_embs_aug[idx])
-                region_nodes_aug = self.gnn(region_embs_aug, edges)
-                batch_region_nodes_aug.append(region_nodes_aug)
+            #aug
+            region_embs_aug = region_embs.clone()
+            region_embs_aug = self.noise_inject(region_embs_aug)
+            region_nodes_aug = self.gnn(region_embs_aug, edges)
+            batch_region_nodes_aug.append(region_nodes_aug)
 
-                #pred
-                region_nodes_aug = F.normalize(region_nodes_aug, dim=1)
-                node_pred_aug = region_nodes_aug @ text_embs.T / temp  # (N, 2)
-                batch_region_node_preds_aug.append(node_pred_aug)
+            # pred
+            region_nodes_aug = F.normalize(region_nodes_aug, dim=1)
+            node_pred_aug = region_nodes_aug @ text_embs.T / temp  # (N, 2)
+            batch_region_node_preds_aug.append(node_pred_aug)
 
         return batch_region_node_preds, batch_region_nodes,\
-               batch_region_node_preds_aug, batch_region_nodes_aug, batch_unlabeled_idx
+               batch_region_node_preds_aug, batch_region_nodes_aug
 
 
     def get_text_embs(self):
@@ -178,27 +172,23 @@ class RegionClipCTModel(nn.Module):
         mean_anorm_prompt = torch.cat(mean_anorm_prompt, dim=0).mean(dim=0) #(640, )
         self._text_embs = torch.stack([mean_norm_prompt, mean_anorm_prompt], dim=0) #(2, 640)
 
-    def get_region_embs(self, x, pad_green=False, generate_unlabeled=False):
+    def get_region_embs(self, x, pad_green=False):
         batch_size = x.shape[0]
         batch_region_embs = []
         batch_regions = []
         batch_edges = []
-        batch_unlabeled_idx = []
         for i in range(batch_size):
             # regions: (h, w), edges:[...]
             x_i = x[i]
             regions, edges = super_pixel_graph_construct(
                 x_i, **self.config['superpixel'])
             x_i = region_sampling(x_i, regions, pad_green)  # (N, 3, h, w)
-            if generate_unlabeled:
-                x_i, idx = region_augment(x_i, self.pad_green, self.p)
-                batch_unlabeled_idx.append(idx)
             region_embs = self.clip.encode_image(x_i)  # (N, d)
             region_embs = region_embs.view(-1, region_embs.shape[-1])
             batch_region_embs.append(region_embs)  # (N, d)
             batch_regions.append(regions)
             batch_edges.append(edges)
-        return batch_region_embs, batch_edges, batch_regions, batch_unlabeled_idx
+        return batch_region_embs, batch_edges, batch_regions
 
     @property
     def text_embs(self):

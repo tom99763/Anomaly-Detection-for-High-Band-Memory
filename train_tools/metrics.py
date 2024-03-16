@@ -1,6 +1,7 @@
 import torch
 from torchmetrics import ROC, PrecisionRecallCurve, Metric
 from torchmetrics.functional import auc
+import logging
 
 class AUROC(ROC):
     def compute(self) -> torch.Tensor:
@@ -92,3 +93,43 @@ class OptimalF1(Metric):
     def reset(self) -> None:
         """Reset the metric."""
         self.precision_recall_curve.reset()
+
+
+class F1AdaptiveThreshold(PrecisionRecallCurve):
+    def __init__(self, default_value: float = 0.5, **kwargs) -> None:
+        super().__init__(num_classes=1, **kwargs)
+
+        self.add_state("value", default=torch.tensor(default_value), persistent=True)
+        self.value = torch.tensor(default_value)
+
+    def compute(self) -> torch.Tensor:
+        """Compute the threshold that yields the optimal F1 score.
+
+        Compute the F1 scores while varying the threshold. Store the optimal
+        threshold as attribute and return the maximum value of the F1 score.
+
+        Returns:
+            Value of the F1 score at the optimal threshold.
+        """
+        precision: torch.Tensor
+        recall: torch.Tensor
+        thresholds: torch.Tensor
+
+        if not any(1 in batch for batch in self.target):
+            msg = (
+                "The validation set does not contain any anomalous images. As a result, the adaptive threshold will "
+                "take the value of the highest anomaly score observed in the normal validation images, which may lead "
+                "to poor predictions. For a more reliable adaptive threshold computation, please add some anomalous "
+                "images to the validation set."
+            )
+            logging.warning(msg)
+
+        precision, recall, thresholds = super().compute()
+        f1_score = (2 * precision * recall) / (precision + recall + 1e-10)
+        if thresholds.dim() == 0:
+            # special case where recall is 1.0 even for the highest threshold.
+            # In this case 'thresholds' will be scalar.
+            self.value = thresholds
+        else:
+            self.value = thresholds[torch.argmax(f1_score)]
+        return self.value

@@ -2,25 +2,20 @@ import torch
 import torch.nn as nn
 import lightning as L
 import torch.optim as optim
-from .model_ct import *
+from .model_mask import *
 from train_tools.metrics import *
 from .losses import *
 from torchmetrics.classification import BinaryF1Score
+import torch.nn.functional as F
 
-class RegionClipCT(L.LightningModule):
+class RegionClipMask(L.LightningModule):
     def __init__(self, config):
         super().__init__()
-        self.model = RegionClipCTModel(config)
+        self.model = RegionClipMaskModel(config)
         self._transform = self.model._transform
         self.config = config
         self.pad_green = config['pad']['pad_green']
         self.use_margin = config['loss']['use_margin']
-        self.beta = config['loss']['beta']
-
-        #threshold
-        self.tn = config['loss']['tn']
-        self.ta = config['loss']['ta']
-        self.alpha =config['loss']['alpha']
 
         #metrics
         self.auroc = AUROC()
@@ -33,41 +28,32 @@ class RegionClipCT(L.LightningModule):
         x, y = batch
         if not self.step%2:
             batch_region_node_preds, batch_region_nodes, \
-            batch_region_node_preds_aug, batch_region_nodes_aug,\
-                batch_unlabeled_idx = self.model(x, self.pad_green, True, True)
-            l_c, l_div, l_ent = div_consistency_loss(
+            batch_region_node_preds_aug, batch_region_nodes_aug\
+                = self.model(x, self.pad_green, True)
+            l_c, l_div= div_consistency_loss_(
                 batch_region_nodes,
                 batch_region_nodes_aug,
                 batch_region_node_preds,
                 batch_region_node_preds_aug,
-                batch_unlabeled_idx,
-                self.tn,
-                self.ta
             )
-            loss = self.beta * l_c + l_div
+            loss = l_c + l_div
             l_ce = torch.tensor(0.)
         else:
             batch_region_node_preds, batch_region_nodes, \
-            batch_region_node_preds_aug, batch_region_nodes_aug, \
-            batch_unlabeled_idx = self.model(x, self.pad_green, True, False)
-            l_c, l_div, l_ent = div_consistency_loss(
+            batch_region_node_preds_aug, batch_region_nodes_aug\
+                = self.model(x, self.pad_green, True)
+            l_c, l_div = div_consistency_loss_(
                 batch_region_nodes,
                 batch_region_nodes_aug,
                 batch_region_node_preds,
                 batch_region_node_preds_aug,
-                batch_unlabeled_idx,
-                self.tn,
-                self.ta
             )
-            l_ce = cross_entropy_loss(batch_region_node_preds, batch_unlabeled_idx)
-            loss = l_ce + self.beta * l_c + self.alpha * l_ent
+            loss = l_c
 
         self.step+=1
         self.log_dict({'loss:': loss.item(),
-                       'l_ce': l_ce.item(),
                        'l_c':l_c.item(),
                        'l_div': l_div.item(),
-                       'l_ent':l_ent.item()
                        },
                       on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
@@ -75,16 +61,21 @@ class RegionClipCT(L.LightningModule):
     def validation_step(self, batch):
         self.eval()
         x, y = batch
+        print(y)
         batch_region_node_preds, batch_region_nodes, \
-        batch_region_node_preds_aug, batch_region_nodes_aug, \
-        batch_unlabeled_idx = self.model(x, self.pad_green)
+        batch_region_node_preds_aug, batch_region_nodes_aug\
+            = self.model(x, self.pad_green)
 
         batch_preds = []
         for i in range(x.shape[0]):
-            region_node_preds = batch_region_node_preds[i].softmax(dim=-1)
-            region_node_preds = region_node_preds[:, 1].max()[None,]
-            batch_preds.append(region_node_preds)
+            region_node_preds = batch_region_node_preds[i].argmax(dim=-1) #(N, 2)
+            region_node_preds = F.one_hot(region_node_preds, 2).float()
+            region_node_preds_aug = batch_region_node_preds_aug[i].softmax(dim=-1)  # (N, 2)
+            pred = 1-(region_node_preds * region_node_preds_aug).sum(dim=-1)
+            pred = pred.max()[None,]
+            batch_preds.append(pred)
         batch_preds = torch.cat(batch_preds, dim=0)  # (N, )
+        print(batch_preds)
 
         #metrics
         self.auroc.update(batch_preds, y)
@@ -113,14 +104,17 @@ class RegionClipCT(L.LightningModule):
         self.eval()
         x, y = batch
         batch_region_node_preds, batch_region_nodes, \
-        batch_region_node_preds_aug, batch_region_nodes_aug, \
-        batch_unlabeled_idx = self.model(x, self.pad_green)
+        batch_region_node_preds_aug, batch_region_nodes_aug\
+            = self.model(x, self.pad_green)
 
         batch_preds = []
         for i in range(x.shape[0]):
-            region_node_preds = batch_region_node_preds[i].softmax(dim=-1)
-            region_node_preds = region_node_preds[:, 1].max()[None,]
-            batch_preds.append(region_node_preds)
+            region_node_preds = batch_region_node_preds[i].argmax(dim=-1)  # (N, 2)
+            region_node_preds = F.one_hot(region_node_preds, 2).float()
+            region_node_preds_aug = batch_region_node_preds_aug[i].softmax(dim=-1)  # (N, 2)
+            pred = 1-(region_node_preds * region_node_preds_aug).sum(dim=-1)
+            pred = pred.max()[None,]
+            batch_preds.append(pred)
         batch_preds = torch.cat(batch_preds, dim=0)  # (N, )
 
         # metrics

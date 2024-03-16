@@ -109,10 +109,10 @@ def green_object_sample():
              for x_ in x]))
     return random_augment
 
-def get_color_distortion(s=1.0):
+def get_color_distortion(p=0.5, s=1.0):
     color_jitter = transforms.ColorJitter(0.8*s, 0.8*s, 0.8*s, 0.2*s)
-    rnd_color_jitter = transforms.RandomApply([color_jitter], p=0.8)
-    rnd_gray = transforms.RandomGrayscale(p=0.8)
+    rnd_color_jitter = transforms.RandomApply([color_jitter], p=p)
+    rnd_gray = transforms.RandomGrayscale(p=p)
     color_distort = transforms.Compose([
         rnd_color_jitter,
         rnd_gray])
@@ -132,14 +132,14 @@ def black_object_sample():
              for x_ in x]))
     return random_augment
 
-def strong_augment():
+def strong_augment(prob):
     random_augment = Lambda(
         lambda x: torch.stack(
-            [RandomErasing(p=0.8, value=torch.rand(1)[0].item())(x_) for x_ in x]))
+            [RandomErasing(p=prob, value=torch.rand(1)[0].item())(x_) for x_ in x]))
     return random_augment
 
 
-def region_augment(regions, pad_green, augment_type='strong'):
+def region_augment(regions, pad_green, prob, augment_type='strong'):
     N = regions.shape[0]
     idx = np.random.choice(N, N//2, replace = False)
     aug_regions = regions[idx] * std[None, :, None, None] +\
@@ -150,10 +150,10 @@ def region_augment(regions, pad_green, augment_type='strong'):
         else:
             random_augment = green_object_sample()
     elif augment_type == 'strong':
-        random_augment = strong_augment()
+        random_augment = strong_augment(prob)
 
     elif augment_type == 'color':
-        random_augment = get_color_distortion()
+        random_augment = get_color_distortion(prob)
     else:
         raise  Exception('specify augment_type')
     aug_regions = random_augment(aug_regions)
