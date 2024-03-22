@@ -4,18 +4,29 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split as ttp
 import os
+import torchvision.transforms as transforms
+from torchvision.transforms import Resize, RandomErasing, Lambda, Normalize, Compose, ToTensor
 
 def rgb_loader(path):
     with open(path, 'rb') as f:
         with Image.open(f) as img:
             return img.convert('RGB')
 
+
+transform = Compose([
+    ToTensor(),
+    Resize([240, 240]),
+    Normalize(
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+
+
 class HBMDataset(Dataset):
-    def __init__(self, data_dir, label,  transform):
+    def __init__(self, data_dir, label, transform_):
         super().__init__()
         self.data_dir = data_dir
         self.label = label
-        self.transform = transform
+        self.transform = transform_
     def __getitem__(self, idx):
         _dir = self.data_dir[idx]
         label = self.label[idx]
@@ -26,16 +37,16 @@ class HBMDataset(Dataset):
         return len(self.data_dir)
 
 class HBMDataModule(L.LightningDataModule):
-    def __init__(self, opt, transform):
+    def __init__(self, opt):
         super().__init__()
         self.batch_size = opt.batch_size
         self.transform = transform
         train_dir = f'{opt.dataset_dir}/train'
         test_dir = f'{opt.dataset_dir}/test'
+
         #train dir
         train_pass_dir = list(map(lambda x: f'{train_dir}/Pass/{x}',
                                   os.listdir(f'{train_dir}/Pass')))
-
         '''
         try:
             train_reject_dir = list(map(lambda x: f'{train_dir}/Reject/{x}',
@@ -43,8 +54,8 @@ class HBMDataModule(L.LightningDataModule):
         except:
             train_reject_dir = []
         '''
-
         train_reject_dir = []
+
         self.train_dir = train_pass_dir + train_reject_dir
         self.train_label = [0] * len(train_pass_dir) + [1] * len(train_reject_dir)
         #self.train_dir, self.val_dir, self.train_label, self.val_label = ttp(train_dir, train_label,

@@ -6,12 +6,11 @@ clip:
   temp: 0.07
 
 superpixel:
-  numSegments: 250
+  numSegments: 100
   sigma: 3
 
-loss:
-  use_margin: True
-  drop_ratio: 0.1
+st:
+  mode: 'teacher'
 
 pad:
   pad_green: False
@@ -25,4 +24,6 @@ gnn:
 prompt:
   linear_probe: False
   share_prompt: True
+
+
 

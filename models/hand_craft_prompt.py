@@ -2,22 +2,22 @@
 
 # Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
+import torch
+import torch.nn as nn
+import torch.nn.functional as  F
+from open_clip.tokenizer import tokenize
+
 
 NORMAL_STATES = [
-    "{}",
     "flawless {}",
     "perfect {}",
     "unblemished {}",
-    "{} without flaw",
-    "{} without defect",
-    "{} without damage",
 ]
 
 ANOMALOUS_STATES = [
     "damaged {}",
-    "{} with flaw",
-    "{} with defect",
-    "{} with damage",
+    "flaw {}",
+    "defect {}"
 ]
 
 TEMPLATES = [
@@ -38,10 +38,6 @@ TEMPLATES = [
     "a photo of the small {}.",
     "a photo of a large {}.",
     "a photo of the large {}.",
-    "a photo of the {} for visual inspection.",
-    "a photo of a {} for visual inspection.",
-    "a photo of the {} for anomaly detection.",
-    "a photo of a {} for anomaly detection.",
 ]
 
 def create_prompt_ensemble(class_name: str = "object") -> tuple[list[str], list[str]]:
@@ -51,3 +47,20 @@ def create_prompt_ensemble(class_name: str = "object") -> tuple[list[str], list[
     anomalous_states = [state.format(class_name) for state in ANOMALOUS_STATES]
     anomalous_ensemble = [template.format(state) for state in anomalous_states for template in TEMPLATES]
     return normal_ensemble, anomalous_ensemble
+
+
+
+def text_global_pool(x, text= None, pool_type='argmax'):
+    if pool_type == 'first':
+        pooled, tokens = x[:, 0], x[:, 1:]
+    elif pool_type == 'last':
+        pooled, tokens = x[:, -1], x[:, :-1]
+    elif pool_type == 'argmax':
+        # take features from the eot embedding (eot_token is the highest number in each sequence)
+        assert text is not None
+        pooled, tokens = x[torch.arange(x.shape[0]), text.argmax(dim=-1)], x
+    else:
+        pooled = tokens = x
+    return pooled, tokens
+
+

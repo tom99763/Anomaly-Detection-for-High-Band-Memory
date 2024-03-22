@@ -21,15 +21,12 @@ def get_config(config_path=None):
         return yaml.load(stream, Loader=yaml.FullLoader)
 def build_dirs(config, opt):
     model_name = config['clip']['model_name']
-    class_name = config['clip']['class_name']
     num_segments = config['superpixel']['numSegments']
     gnn_type = config['gnn']['gnn_type']
     net_type = config['gnn']['net_type']
-    drop_ratio = config['loss']['drop_ratio']
-    file_name = f'{model_name}_{class_name}_{num_segments}_{gnn_type}_{drop_ratio}'
+    file_name = f'{model_name}_{num_segments}_{gnn_type}_{net_type}'
     config['file_name'] = file_name
     type_ = opt.dataset_dir.split('/')[-1]
-
     output_dir = f'{opt.output_dir}/{opt.learning_type}'
     ckpt_dir = f'{opt.ckpt_dir}/{opt.learning_type}'
 
@@ -55,12 +52,16 @@ def build_dirs(config, opt):
         os.makedirs(ckpt_dir)
 
     output_dir = f'{output_dir}/{file_name}'
-    ckpt_dir = f'{ckpt_dir}/{file_name}.ckpt'
+    ckpt_dir_ = f'{ckpt_dir}/{file_name}.ckpt'
+    ckpt_dir_t = f'{ckpt_dir}/{file_name}_t.ckpt'
+    ckpt_dir_s = f'{ckpt_dir}/{file_name}_s.ckpt'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     config['output_dir'] = output_dir
-    config['ckpt_dir'] = ckpt_dir
+    config['ckpt_dir'] = ckpt_dir_
+    config['ckpt_dir_t'] = ckpt_dir_t
+    config['ckpt_dir_s'] = ckpt_dir_s
     output_img_dir = f'{output_dir}/img'
     output_log_dir = f'{output_dir}/log'
     if not os.path.exists(output_img_dir):

@@ -5,6 +5,8 @@ import torch.optim as optim
 from .model_semi import *
 from train_tools.metrics import *
 from .losses import *
+from torchmetrics.classification import BinaryF1Score
+import torch.nn.functional as F
 
 class RegionClipSemi(L.LightningModule):
     def __init__(self, config):
@@ -13,96 +15,84 @@ class RegionClipSemi(L.LightningModule):
         self._transform = self.model._transform
         self.config = config
         self.pad_green = config['pad']['pad_green']
-        self.use_margin = config['loss']['use_margin']
-        self.loss_func = margin_contrastive_loss if self.use_margin else contrastive_loss
 
         #metrics
-        self.auroc = AUROC()
-        self.aupr = AUPR()
+        self.auroc = AUROC().cuda()
+        self.aupr = AUPR().cuda()
+        self.f1_score = BinaryF1Score().cuda()
         self.step = 0.
 
     def training_step(self, batch, batch_idx):
-        self.step += 1
         self.train()
         x, y = batch
-        batch_region_embs, batch_region_nodes, \
-        batch_region_emb_preds, batch_region_node_preds,\
-            batch_anorm_idx = self.model(x, self.pad_green, True)
-        l_cl = self.loss_func(batch_region_embs, batch_region_nodes,
-        batch_region_emb_preds, batch_region_node_preds,
-            batch_anorm_idx, self.model.text_embs, step = self.step)
-        loss = l_cl
-        self.log_dict({'loss:': loss.item()},
+        y = y.cuda()
+        batch_region_node_preds, batch_region_nodes,\
+        batch_text_embs,batch_regions = self.model(x, self.pad_green)
+        loss = cross_entropy(batch_region_node_preds, y.long())
+
+        self.step += 1
+        self.log_dict({'loss:': loss.item(),
+                       },
                       on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
 
     def validation_step(self, batch):
         self.eval()
         x, y = batch
-        batch_region_embs, batch_region_nodes, \
-        batch_region_emb_preds, batch_region_node_preds, \
-        batch_anorm_idx = self.model(x, self.pad_green)
-
-        batch_preds = []
-        for i in range(x.shape[0]):
-            region_node_preds = batch_region_node_preds[i].softmax(dim=-1)
-            region_node_preds = region_node_preds[:, 1].max()[None,]
-            batch_preds.append(region_node_preds)
-        batch_preds = torch.cat(batch_preds, dim=0)  # (N, )
+        y = y.cuda()
+        batch_region_node_preds, batch_region_nodes, \
+        batch_text_embs, batch_regions = self.model(x, self.pad_green)
+        batch_preds = batch_region_node_preds.softmax(dim=-1)[:, 1]
 
         #metrics
         self.auroc.update(batch_preds, y)
         self.aupr.update(batch_preds, y)
-
-        #auroc = self.auroc.compute()
-        #aupr = self.aupr.compute()
+        self.f1_score.update(batch_preds, y)
 
         self.log_dict({'val_auroc': self.auroc.compute(),
                        'val_aupr': self.aupr.compute(),
+                       'val_f1_score': self.f1_score.compute()
                        },
                       on_epoch=True, prog_bar=True, logger=True)
-        return {'auroc': self.auroc.compute(), 'aupr': self.aupr.compute()}
+        return {'auroc': self.auroc.compute(), 'aupr': self.aupr.compute(),
+                'f1_score':self.f1_score.compute()
+                }
 
     def on_validation_epoch_end(self):
         auroc = self.auroc.compute()
         aupr = self.aupr.compute()
-        self.log_dict({'val_auroc': auroc, 'val_aupr': aupr})
+        f1_score = self.f1_score.compute()
+        self.log_dict({'val_auroc': auroc, 'val_aupr': aupr, 'val_f1_score':f1_score})
         self.auroc.reset()
         self.aupr.reset()
+        self.f1_score.reset()
 
     def test_step(self, batch):
         self.eval()
         x, y = batch
-        batch_region_embs, batch_region_nodes, \
-        batch_region_emb_preds, batch_region_node_preds, \
-        batch_anorm_idx = self.model(x, self.pad_green)
-
-        batch_preds = []
-        for i in range(x.shape[0]):
-            region_node_preds = batch_region_node_preds[i].softmax(dim=-1)
-            region_node_preds = region_node_preds[:, 1].max()[None,]
-            batch_preds.append(region_node_preds)
-        batch_preds = torch.cat(batch_preds, dim=0)  # (N, )
+        y = y.cuda()
+        batch_region_node_preds, batch_region_nodes, \
+        batch_text_embs, batch_regions = self.model(x, self.pad_green)
+        batch_preds = batch_region_node_preds.softmax(dim=-1)[:, 1]
 
         # metrics
         self.auroc.update(batch_preds, y)
         self.aupr.update(batch_preds, y)
-
-        # auroc = self.auroc.compute()
-        # aupr = self.aupr.compute()
+        self.f1_score.update(batch_preds, y)
 
         self.log_dict({'test_auroc': self.auroc.compute(),
                        'test_aupr': self.aupr.compute(),
+                       'test_f1_score': self.f1_score.compute()
                        },
                       on_epoch=True, prog_bar=True, logger=True)
-        return {'auroc': self.auroc.compute(), 'aupr': self.aupr.compute()}
+        return {'auroc': self.auroc.compute(), 'aupr': self.aupr.compute(),
+                'f1_score': self.f1_score.compute()
+                }
 
     def on_test_end(self):
-        auroc = self.auroc.compute()
-        aupr = self.aupr.compute()
-        #self.log_dict({'test_auroc': auroc, 'test_aupr': aupr})
         self.auroc.reset()
         self.aupr.reset()
+        self.f1_score.reset()
 
     def backward(self, loss):
         loss.backward(retain_graph=True)
@@ -113,7 +103,7 @@ class RegionClipSemi(L.LightningModule):
             lr=1e-3
         )
         scheduler = optim.lr_scheduler.ExponentialLR(
-            optimizer, 0.8, last_epoch=-1, verbose=True)
+            optimizer, 0.9, last_epoch=-1, verbose=True)
         return {"optimizer": optimizer,"lr_scheduler": scheduler}
 
 

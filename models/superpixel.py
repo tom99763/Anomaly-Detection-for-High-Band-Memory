@@ -37,13 +37,8 @@ def super_pixel_graph_construct(img, numSegments = 100, sigma = 3):
     regions, edges = regions.cuda(), edges.cuda()
     return regions, edges
 
-"""
-def region_sampling(x, regions):
-    '''
-    :param x: (3, h, w)
-    :param regions: (h, w)
-    :return output: (N, 3, h, w)
-    '''
+'''
+def region_sampling(x, regions, pad_green=None):
     num_regions = len(regions.unique())
     output = []
     #filtering based on region order
@@ -53,15 +48,10 @@ def region_sampling(x, regions):
         output.append(xi)
     output = torch.stack(output, dim=0)
     return output
-"""
+'''
 
 
 def region_sampling(x, regions, pad_green=False):
-    '''
-    :param x: (3, h, w)
-    :param regions: (h, w)
-    :return output: (N, 3, h, w)
-    '''
     _, h, w = x.shape
     grid_x, grid_y = torch.meshgrid(torch.arange(0, h), torch.arange(0, w), indexing='ij')
     grid = torch.stack([grid_x, grid_y], dim=0).cuda()
@@ -90,6 +80,7 @@ def region_sampling(x, regions, pad_green=False):
     output = torch.stack(output, dim=0)
     return output
 
+'''
 mean = torch.tensor([0.485, 0.456, 0.406]).cuda()
 std = torch.tensor([0.229, 0.224, 0.225]).cuda()
 normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -131,32 +122,7 @@ def black_object_sample():
             )(x_) \
              for x_ in x]))
     return random_augment
-
-def strong_augment(prob):
-    random_augment = Lambda(
-        lambda x: torch.stack(
-            [RandomErasing(p=prob, value=torch.rand(1)[0].item())(x_) for x_ in x]))
-    return random_augment
+'''
 
 
-def region_augment(regions, pad_green, prob, augment_type='strong'):
-    N = regions.shape[0]
-    idx = np.random.choice(N, N//2, replace = False)
-    aug_regions = regions[idx] * std[None, :, None, None] +\
-                  mean[None, :, None, None] #(N//2, 3, h, w)
-    if augment_type == 'weak':
-        if pad_green:
-            random_augment = black_object_sample()
-        else:
-            random_augment = green_object_sample()
-    elif augment_type == 'strong':
-        random_augment = strong_augment(prob)
 
-    elif augment_type == 'color':
-        random_augment = get_color_distortion(prob)
-    else:
-        raise  Exception('specify augment_type')
-    aug_regions = random_augment(aug_regions)
-    aug_regions = normalize(aug_regions)
-    regions[idx] = aug_regions
-    return regions, idx
