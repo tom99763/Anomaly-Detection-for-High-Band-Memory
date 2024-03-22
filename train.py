@@ -19,7 +19,7 @@ def parse_opt():
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--batch_size', type=int, default=8)
-    parser.add_argument('--num_epochs', type=int, default=50)
+    parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--learning_type', type=str, default='st')
     opt, _ = parser.parse_known_args()
@@ -95,8 +95,29 @@ def main(config, opt):
 if __name__ == '__main__':
     opt = parse_opt()
     config = get_config()
-    main(config, opt)
-    config['st']['mode'] = 'student'
-    main(config, opt)
+
+    num_segments = [100, 200, 75]
+    gnn_type = ['GAT', 'GCN']
+    net_type = ['gnn', 'linear']
+
+    for net_type_ in net_type:
+        config['gnn']['net_type'] = net_type_
+        for num_segment_ in num_segments:
+            config['superpixel']['numSegments'] = num_segment_
+            if net_type_ =='gnn':
+                for gnn_type_ in gnn_type:
+                    config['gnn']['gnn_type'] = gnn_type_
+                    config['st']['mode'] = 'teacher'
+                    main(config, opt)
+                    config['st']['mode'] = 'student'
+                    main(config, opt)
+            else:
+                config['st']['mode'] = 'teacher'
+                main(config, opt)
+                config['st']['mode'] = 'student'
+                main(config, opt)
+
+
+
 
 

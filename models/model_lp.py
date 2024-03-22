@@ -72,7 +72,10 @@ class RegionClipLPModel(nn.Module):
             pretrained=config['clip']['pretrained']
         )
         self.clip = self.clip.to('cuda')
-        self.teacher = GNN(config).to('cuda')
+        if self.net_type == 'gnn':
+            self.teacher = GNN(config).to('cuda')
+        elif self.net_type == 'linear':
+            self.teacher = NN().to('cuda')
         self.student = NN().to('cuda')
         self.learned_object = Learned_Object(self.clip).cuda()
 
@@ -135,8 +138,11 @@ class RegionClipLPModel(nn.Module):
             batch_regions.append(regions)
             batch_edges.append(edges)
 
-            #
-            region_nodes_t = self.teacher(region_embs, edges)
+            #forward
+            if self.net_type == 'gnn':
+                region_nodes_t = self.teacher(region_embs, edges)
+            elif self.net_type == 'linear':
+                region_nodes_t = self.teacher(region_embs)
             batch_nodes_t.append(region_nodes_t)
             if self.mode == 'teacher':
                 region_max_node_t, _ = region_nodes_t.max(dim=0, keepdim=True)  # (1, d)
