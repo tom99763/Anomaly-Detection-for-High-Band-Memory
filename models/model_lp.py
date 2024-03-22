@@ -23,10 +23,8 @@ from .superpixel import *
 from .losses import *
 from .prompt import *
 from torch_geometric.nn import GATConv, GCNConv
-from torch_geometric.nn.models import LabelPropagation
 
-
-class GNN(nn.Module):
+class Teacher_GNN(nn.Module):
     def __init__(self, config):
         super().__init__()
         gnn_type = config['gnn']['gnn_type']
@@ -34,20 +32,46 @@ class GNN(nn.Module):
         if gnn_type == 'GCN':
             self.gnn1 = GCNConv(640, 64)
             self.gnn2 = GCNConv(64, 64)
-            self.gnn3 = GCNConv(64, 640)
+            self.gnn3 = GCNConv(64, 64)
+            self.gnn4 = GCNConv(64, 64)
+            self.gnn5 = GCNConv(64, 640)
 
         elif gnn_type == 'GAT':
             self.gnn1 = GATConv(640, 64)
             self.gnn2 = GATConv(64, 64)
-            self.gnn3 = GATConv(64, 640)
+            self.gnn3 = GATConv(64, 64)
+            self.gnn4 = GATConv(64, 64)
+            self.gnn5 = GATConv(64, 640)
     def forward(self, x, edges):
         x = F.relu(self.gnn1(x, edges.T))
         x = F.relu(self.gnn2(x, edges.T))
-        x = self.gnn3(x, edges.T)
+        x = F.relu(self.gnn3(x, edges.T))
+        x = F.relu(self.gnn4(x, edges.T))
+        x = self.gnn5(x, edges.T)
         return x
 
 
-class NN(nn.Module):
+class Teacher_NN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.seq = nn.Sequential(
+            nn.Linear(640, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 640)
+        )
+
+    def forward(self, x):
+        return self.seq(x)
+
+
+
+class Student_NN(nn.Module):
     def __init__(self):
         super().__init__()
         self.seq = nn.Sequential(
@@ -73,10 +97,10 @@ class RegionClipLPModel(nn.Module):
         )
         self.clip = self.clip.to('cuda')
         if self.net_type == 'gnn':
-            self.teacher = GNN(config).to('cuda')
+            self.teacher = Teacher_GNN(config).to('cuda')
         elif self.net_type == 'linear':
-            self.teacher = NN().to('cuda')
-        self.student = NN().to('cuda')
+            self.teacher = Teacher_NN().to('cuda')
+        self.student = Student_NN().to('cuda')
         self.learned_object = Learned_Object(self.clip).cuda()
 
         for param in self.clip.parameters():

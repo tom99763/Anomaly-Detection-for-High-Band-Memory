@@ -47,6 +47,7 @@ def main(config, opt):
             model = RegionClipLP(config)
 
         if os.path.exists(config['ckpt_dir_s']):
+            return
             print('load student weights')
             model = RegionClipLP.load_from_checkpoint(config['ckpt_dir_s'], config=config)
 
@@ -54,7 +55,7 @@ def main(config, opt):
     dataset = HBMDataModule(opt)
 
     if mode == 'student':
-        earlystop = EarlyStopping(monitor="val_f1_score", patience=10, mode="max")
+        earlystop = EarlyStopping(monitor="val_f1_score", patience=5, mode="max")
         modelckpt = ModelCheckpoint(monitor='val_f1_score',
                                     dirpath=f"{opt.ckpt_dir}/{opt.learning_type}/"
                                             f"{opt.dataset_dir.split('/')[-1]}/"
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     opt = parse_opt()
     config = get_config()
 
-    num_segments = [100, 200, 75]
+    num_segments = [300, 100, 200, 75]
     gnn_type = ['GAT', 'GCN']
     net_type = ['gnn', 'linear']
 
