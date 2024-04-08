@@ -19,9 +19,9 @@ def parse_opt():
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--batch_size', type=int, default=8)
-    parser.add_argument('--num_epochs', type=int, default=100)
+    parser.add_argument('--num_epochs', type=int, default=200)
     parser.add_argument('--mode', type=str, default='train')
-    parser.add_argument('--learning_type', type=str, default='st')
+    parser.add_argument('--learning_type', type=str, default='stfpm')
     opt, _ = parser.parse_known_args()
     return opt
 
@@ -39,6 +39,15 @@ def main(config, opt):
             model = STFPM(config)
             print('no weights')
 
+    elif opt.learning_type == 'revdis':
+        if os.path.exists(config['ckpt_dir']):
+            model = RevDistill.load_from_checkpoint(config['ckpt_dir'], config=config)
+            print('load weights')
+        else:
+            model = RevDistill(config)
+            print('no weights')
+
+
     elif opt.learning_type == 'st':
         if os.path.exists(config['ckpt_dir_t']):
             model = RegionClipLP.load_from_checkpoint(config['ckpt_dir_t'], config=config)
@@ -54,6 +63,7 @@ def main(config, opt):
 
     dataset = HBMDataModule(opt)
 
+    '''
     if mode == 'student':
         earlystop = EarlyStopping(monitor="val_f1_score", patience=5, mode="max")
         modelckpt = ModelCheckpoint(monitor='val_f1_score',
@@ -71,7 +81,7 @@ def main(config, opt):
         )
 
     elif mode == 'teacher':
-        earlystop = EarlyStopping(monitor="val_loss", patience=2, mode="min")
+        earlystop = EarlyStopping(monitor="val_loss", patience=3, mode="min")
         modelckpt = ModelCheckpoint(monitor='val_loss',
                                     dirpath=f"{opt.ckpt_dir}/{opt.learning_type}/"
                                             f"{opt.dataset_dir.split('/')[-1]}/"
@@ -85,6 +95,22 @@ def main(config, opt):
             logger=CSVLogger(config['output_log_dir']),
             check_val_every_n_epoch=2,
         )
+    '''
+
+    earlystop = EarlyStopping(monitor="val_sum_score", patience=60, mode="max")
+    modelckpt = ModelCheckpoint(monitor='val_sum_score',
+                                dirpath=f"{opt.ckpt_dir}/{opt.learning_type}/"
+                                        f"{opt.dataset_dir.split('/')[-1]}/"
+                                        f"{config['gnn']['net_type']}",
+                                filename=f"{config['file_name']}",
+                                mode='max')
+    trainer = L.Trainer(
+        max_epochs=opt.num_epochs,
+        callbacks=[earlystop, modelckpt],
+        accelerator="gpu",
+        logger=CSVLogger(config['output_log_dir']),
+        check_val_every_n_epoch=2,
+    )
 
 
 
@@ -96,8 +122,10 @@ def main(config, opt):
 if __name__ == '__main__':
     opt = parse_opt()
     config = get_config()
+    main(config, opt)
 
-    num_segments = [300, 100, 200, 75]
+    '''
+    num_segments = [100, 200, 75]
     gnn_type = ['GAT', 'GCN']
     net_type = ['gnn', 'linear']
 
@@ -117,7 +145,8 @@ if __name__ == '__main__':
                 main(config, opt)
                 config['st']['mode'] = 'student'
                 main(config, opt)
-
+                
+    '''
 
 
 

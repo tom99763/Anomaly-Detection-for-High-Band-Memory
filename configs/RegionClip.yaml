@@ -7,10 +7,16 @@ clip:
 
 superpixel:
   numSegments: 100
-  sigma: 3
+  sigma: 3.
+
+
+loss:
+  tau: 0.07
+  num_negs: 64
 
 st:
-  mode: 'teacher'
+  mode: 'none'
+  beta: 1.0
 
 pad:
   pad_green: False

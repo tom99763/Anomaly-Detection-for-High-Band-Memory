@@ -4,96 +4,123 @@ import lightning as L
 import torch.optim as optim
 from .model import *
 from train_tools.metrics import *
+from .losses import *
+from torchmetrics.classification import BinaryF1Score
+import torch.nn.functional as F
+from .threshold import *
 
-class RegionClip(L.LightningModule):
+class RevDistill(L.LightningModule):
     def __init__(self, config):
         super().__init__()
-        self.model = RegionClipModel(config)
-        self._transform = self.model._transform
-        self.level = self.model.level
-        self.loss = prior_cross_entropy if self.level == 'node' else nn.CrossEntropyLoss()
+        self.model = RevDistill_Model(config)
         self.config = config
 
         #metrics
-        self.auroc = AUROC()
-        self.aupr = AUPR()
+        self.auroc = AUROC().cuda()
+        self.aupr = AUPR().cuda()
+        self.f1_score = BinaryF1Score().cuda()
+        self.f1_adapt = F1AdaptiveThreshold()
+        self.min_max = MinMax()
+        self.step = 0.
+        self.thr = self.f1_adapt.value
+        self.min, self.max = self.min_max.min, self.min_max.max
+        self.save_hyperparameters()
+
+        self.loss_func = Patch_infonce(config).cuda()
 
     def training_step(self, batch, batch_idx):
-        self.train()
+        self.model.train_mode()
         x, y = batch
-        batch_preds, batch_regions = self.model(x)
-        batch_preds = torch.stack(batch_preds, dim=0)
-        if self.level == 'node':
-            loss = self.loss(batch_preds, batch_regions)
-        else:
-            loss = self.loss(batch_preds, y.long())
-        self.log('loss:', loss.item(), on_epoch=True, prog_bar=True, logger=True)
+        y = y.cuda()
+        ft, fs = self.model(x, True)
+        loss = self.loss_func(ft, fs, self.model.proj)
+        self.step += 1
+        self.log_dict({'loss:': loss.item(),
+                       },
+                      on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
 
     def validation_step(self, batch):
-        self.eval()
+        self.model.eval_mode()
         x, y = batch
-        batch_preds, batch_regions = self.model(x)
-        batch_preds = torch.stack(batch_preds, dim=0)
-        if self.level == 'node':
-            loss = self.loss(batch_preds, batch_regions)
-        else:
-            loss = self.loss(batch_preds, y.long())
-        #metrics
-        self.auroc.update(batch_preds.softmax(dim=1)[:, 1], y)
-        self.aupr.update(batch_preds.softmax(dim=1)[:, 1], y)
-        self.log_dict({'val_loss': loss.item(),
-                       'val_auroc': self.auroc.compute(),
-                       'val_aupr': self.aupr.compute(),
-                       },
-                      on_epoch=True, prog_bar=True, logger=True)
-        return {'loss': loss, 'auroc': self.auroc.compute(), 'aupr': self.aupr.compute()}
+        y = y.cuda()
+
+        anomap = self.model(x)
+        score, _ = anomap.flatten(1, 3).max(dim=-1)
+
+        #update score
+        self.min_max.update(anomap)
+        self.f1_adapt.update(score, y)
+        score = normalize(score, self.min, self.max, self.thr)
+
+        # metrics
+        self.auroc.update(score, y)
+        self.aupr.update(score, y)
+        self.f1_score.update(score, y)
 
     def on_validation_epoch_end(self):
         auroc = self.auroc.compute()
         aupr = self.aupr.compute()
-        self.log_dict({'val_auroc': auroc, 'val_aupr': aupr})
+        f1_score = self.f1_score.compute()
+        sum_score = auroc + aupr + f1_score
+        self.log_dict(
+            {'val_auroc': auroc, 'val_aupr': aupr, 'val_f1_score': f1_score,
+             'val_min': self.min, 'val_max': self.max, 'f1_thr': self.thr, 'val_sum_score': sum_score
+             })
         self.auroc.reset()
         self.aupr.reset()
+        self.f1_score.reset()
+        self.thr = self.f1_adapt.compute()
+        self.min, self.max = self.min_max.compute()
+        self.f1_adapt.reset()
+        self.min_max.reset()
+
 
     def test_step(self, batch):
-        self.eval()
+        self.model.eval_mode()
         x, y = batch
-        batch_preds, batch_regions = self.model(x)
-        batch_preds = torch.stack(batch_preds, dim=0)
-        if self.level == 'node':
-            loss = self.loss(batch_preds, batch_regions)
-        else:
-            loss = self.loss(batch_preds, y.long())
+        y = y.cuda()
+
+        anomap = self.model(x)
+        score, _ = anomap.flatten(1, 3).max(dim=-1)
+        score = normalize(score, self.min, self.max, self.thr)
+
         # metrics
-        self.auroc.update(batch_preds.softmax(dim=1)[:, 1], y)
-        self.aupr.update(batch_preds.softmax(dim=1)[:, 1], y)
-        self.log_dict({'test_loss': loss.item(),
-                       'test_auroc': self.auroc.compute(),
-                       'test_aupr': self.aupr.compute(),
-                       },
-                      on_epoch=True, prog_bar=True, logger=True)
-        return {'loss': loss, 'auroc': self.auroc.compute(), 'aupr': self.aupr.compute()}
+        self.auroc.update(score, y)
+        self.aupr.update(score, y)
+        self.f1_score.update(score, y)
 
     def on_test_end(self):
         auroc = self.auroc.compute()
         aupr = self.aupr.compute()
-        #self.log_dict({'test_auroc': auroc, 'test_aupr': aupr})
+        f1_score = self.f1_score.compute()
+        self.logger.log_metrics({'auroc': auroc, 'aupr': aupr, 'f1_score': f1_score})
         self.auroc.reset()
         self.aupr.reset()
+        self.f1_score.reset()
 
     def backward(self, loss):
-        loss.backward(retain_graph=True)
+        loss.backward()
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(
+        optimizer= optim.SGD(
             params=self.model.parameters(),
-            lr=1e-3
+            lr=0.4,
+            momentum=0.9,
+            dampening=0.0,
+            weight_decay=0.001,
         )
-        scheduler = optim.lr_scheduler.ExponentialLR(
-            optimizer, 0.9, last_epoch=-1, verbose=True)
-        return {"optimizer": optimizer,"lr_scheduler": scheduler}
+        return {"optimizer": optimizer}
 
+    def on_save_checkpoint(self, checkpoint):
+        checkpoint['thr'] = self.thr
+        checkpoint['min'] = self.min
+        checkpoint['max'] = self.max
+
+    def on_load_checkpoint(self, checkpoint):
+        self.thr = checkpoint['thr']
+        self.min = checkpoint['min']
+        self.max = checkpoint['max']
 
     @property
     def trainer_arguments(self):

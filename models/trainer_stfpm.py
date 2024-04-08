@@ -63,9 +63,10 @@ class STFPM(L.LightningModule):
         auroc = self.auroc.compute()
         aupr = self.aupr.compute()
         f1_score = self.f1_score.compute()
+        sum_score = auroc + aupr + f1_score
         self.log_dict(
             {'val_auroc': auroc, 'val_aupr': aupr, 'val_f1_score': f1_score,
-             'val_min': self.min, 'val_max': self.max, 'f1_thr': self.thr
+             'val_min': self.min, 'val_max': self.max, 'f1_thr': self.thr, 'val_sum_score': sum_score
              })
         self.auroc.reset()
         self.aupr.reset()

@@ -125,4 +125,3 @@ def black_object_sample():
 '''
 
 
-

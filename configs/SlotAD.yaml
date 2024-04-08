@@ -1,0 +1,8 @@
+
+backbone_name: 'resnet18'
+
+slot_attn:
+  slot_dim: 64
+  num_slots: 5
+  hid_dim: 64
+  n_iters: 3

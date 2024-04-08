@@ -15,7 +15,7 @@ def rgb_loader(path):
 
 transform = Compose([
     ToTensor(),
-    Resize([240, 240]),
+    Resize([256, 256]),
     Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])

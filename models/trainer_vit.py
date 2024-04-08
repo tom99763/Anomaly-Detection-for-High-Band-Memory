@@ -2,17 +2,17 @@ import torch
 import torch.nn as nn
 import lightning as L
 import torch.optim as optim
-from .model_lp import *
+from .model_vit import *
 from train_tools.metrics import *
 from .losses import *
 from torchmetrics.classification import BinaryF1Score
 import torch.nn.functional as F
 from .threshold import *
 
-class RegionClipLP(L.LightningModule):
+class RegionClipViT(L.LightningModule):
     def __init__(self, config):
         super().__init__()
-        self.model = RegionClipLPModel(config)
+        self.model = RegionClipViTModel(config)
         self.config = config
         self.mode = self.config['st']['mode']
         self.pad_green = self.config['pad']['pad_green']
@@ -26,30 +26,28 @@ class RegionClipLP(L.LightningModule):
         self.step = 0.
         self.thr = self.f1_adapt.value
         self.min, self.max = self.min_max.min, self.min_max.max
+        self.beta = config['st']['beta']
         self.save_hyperparameters()
-
 
     def training_step(self, batch, batch_idx):
         x, y = batch
         y = y.cuda()
-        batch_size = x.shape[0]
         if self.mode == 'teacher':
-            img_preds, batch_preds_t, batch_preds_s, \
-            batch_nodes_t, batch_nodes_s, batch_anomaps = self.model(x, self.pad_green)
-            loss = nn.CrossEntropyLoss()(batch_preds_t, img_preds.softmax(dim=-1))+ \
-                   torch.sum(img_preds**2, dim=-1).mean() +\
-                   torch.sum(batch_preds_t**2, dim=-1).mean()
+            self.model.teacher.train()
+            img_preds, node_preds_t, nodes_t, nodes_s, anomap = self.model(x)
+            loss = nn.CrossEntropyLoss()(node_preds_t, img_preds.softmax(dim=-1))+ \
+                   self.beta *(torch.sum(img_preds**2, dim=-1).mean() +
+                   torch.sum(node_preds_t**2, dim=-1).mean())
 
         elif self.mode == 'student':
-            img_preds, batch_preds_t, batch_preds_s, \
-            batch_nodes_t, batch_nodes_s, batch_anomaps = self.model(x, self.pad_green)
-            loss = torch.tensor(0.).cuda()
-            for i in range(batch_size):
-                node_s = batch_nodes_s[i]
-                node_t = batch_nodes_t[i]
-                loss_ =  nn.MSELoss(reduction='none')(node_s, node_t) #(N, d)
-                q = torch.quantile(loss_, 0.8)
-                loss += loss_[loss_>q].sum()
+            self.model.teacher.eval()
+            self.model.student.train()
+            img_preds, node_preds_t, nodes_t, nodes_s, anomap = self.model(x)
+            #loss = nn.MSELoss(reduction='none')(nodes_s, nodes_t) #(b, N, 640)
+            #loss = loss.reshape(-1, 225 * 640)
+            #q = torch.quantile(loss, 0.8, dim=-1, keepdim=True) #(b, 1)
+            #loss = loss[loss > q].sum()
+            loss = vitst_loss(nodes_t, nodes_s)
 
         self.step += 1
         self.log_dict({'loss:': loss.item(),
@@ -62,35 +60,37 @@ class RegionClipLP(L.LightningModule):
         y = y.cuda()
 
         if self.mode == 'student':
-            img_preds, batch_preds_t, batch_preds_s, \
-            batch_nodes_t, batch_nodes_s, batch_anomaps = self.model(x, self.pad_green)
+            self.model.teacher.eval()
+            self.model.student.eval()
+            img_preds, node_preds_t, nodes_t, nodes_s, anomap = self.model(x)
 
-
-            scores = []
-            for anomap in batch_anomaps:
-                self.min_max.update(anomap)
-                score, _ = anomap.max(dim=0)
-                scores.append(score)
-            scores = torch.cat(scores)
+            self.min_max.update(anomap)
+            scores, _ = anomap.flatten(1, 3).max(dim=-1)
 
             # update score
             self.f1_adapt.update(scores, y)
             scores = normalize(scores, self.min, self.max, self.thr)
+
 
             # metrics
             self.auroc.update(scores, y)
             self.aupr.update(scores, y)
             self.f1_score.update(scores, y)
 
+            self.log_dict({'val_f1': self.f1_score.compute(),
+                           },
+                          on_epoch=True, prog_bar=True, logger=True)
+
         elif self.mode == 'teacher':
-            img_preds, batch_preds_t, batch_preds_s, \
-            batch_nodes_t, batch_nodes_s, batch_anomaps = self.model(x, self.pad_green)
-            loss = nn.CrossEntropyLoss()(batch_preds_t, img_preds.softmax(dim=-1)) + \
-                   torch.sum(img_preds ** 2, dim=-1).mean() + \
-                   torch.sum(batch_preds_t ** 2, dim=-1).mean()
+            self.model.teacher.eval()
+            img_preds, node_preds_t, nodes_t, nodes_s, anomap = self.model(x)
+            loss = nn.CrossEntropyLoss()(node_preds_t, img_preds.softmax(dim=-1)) + \
+                   self.beta * (torch.sum(img_preds ** 2, dim=-1).mean() +
+                                torch.sum(node_preds_t ** 2, dim=-1).mean())
+
             print('val', y)
             print('val', img_preds.softmax(dim=-1)[:, 1])
-            print('val', batch_preds_t.softmax(dim=-1)[:, 1])
+            print('val', node_preds_t.softmax(dim=-1)[:, 1])
 
             self.log_dict({'val_loss': loss.item(),
                            },
@@ -118,15 +118,15 @@ class RegionClipLP(L.LightningModule):
         y = y.cuda()
 
         if self.mode == 'student':
-            img_preds, batch_preds_t, batch_preds_s, \
-            batch_nodes_t, batch_nodes_s, batch_anomaps = self.model(x, self.pad_green)
+            self.model.teacher.eval()
+            self.model.student.eval()
+            img_preds, node_preds_t, nodes_t, nodes_s, anomap = self.model(x)
 
-            scores = []
-            for anomap in batch_anomaps:
-                self.min_max.update(anomap)
-                score, _ = anomap.max(dim=0)
-                scores.append(score)
-            scores = torch.cat(scores)
+            self.min_max.update(anomap)
+            scores, _ = anomap.flatten(1, 3).max(dim=-1)
+
+            # update score
+            self.f1_adapt.update(scores, y)
             scores = normalize(scores, self.min, self.max, self.thr)
 
             # metrics
@@ -170,3 +170,4 @@ class RegionClipLP(L.LightningModule):
     def trainer_arguments(self):
         """Set model-specific trainer arguments."""
         return {"gradient_clip_val": 0, "num_sanity_val_steps": 0}
+

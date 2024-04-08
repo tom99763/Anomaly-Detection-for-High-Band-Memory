@@ -24,7 +24,8 @@ def build_dirs(config, opt):
     num_segments = config['superpixel']['numSegments']
     gnn_type = config['gnn']['gnn_type']
     net_type = config['gnn']['net_type']
-    file_name = f'{model_name}_{num_segments}_{gnn_type}_{net_type}'
+    num_negs = config['loss']['num_negs']
+    file_name = f'{model_name}_{num_negs}'
     config['file_name'] = file_name
     type_ = opt.dataset_dir.split('/')[-1]
     output_dir = f'{opt.output_dir}/{opt.learning_type}'
