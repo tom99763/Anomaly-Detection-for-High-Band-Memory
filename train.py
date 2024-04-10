@@ -21,13 +21,12 @@ def parse_opt():
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=200)
     parser.add_argument('--mode', type=str, default='train')
-    parser.add_argument('--learning_type', type=str, default='stfpm')
+    parser.add_argument('--learning_type', type=str, default='revdis')
     opt, _ = parser.parse_known_args()
     return opt
 
 def main(config, opt):
     build_dirs(config, opt)
-    mode = config['st']['mode']
     #train_tools
     set_seed(0)
 
@@ -100,8 +99,7 @@ def main(config, opt):
     earlystop = EarlyStopping(monitor="val_sum_score", patience=60, mode="max")
     modelckpt = ModelCheckpoint(monitor='val_sum_score',
                                 dirpath=f"{opt.ckpt_dir}/{opt.learning_type}/"
-                                        f"{opt.dataset_dir.split('/')[-1]}/"
-                                        f"{config['gnn']['net_type']}",
+                                        f"{opt.dataset_dir.split('/')[-1]}",
                                 filename=f"{config['file_name']}",
                                 mode='max')
     trainer = L.Trainer(

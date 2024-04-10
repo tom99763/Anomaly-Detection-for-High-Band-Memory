@@ -5,31 +5,15 @@ clip:
   num_prompts: 0
   temp: 0.07
 
-superpixel:
-  numSegments: 100
-  sigma: 3.
-
-
 loss:
   tau: 0.07
-  num_negs: 64
+  num_negs: 512
 
-st:
-  mode: 'none'
-  beta: 1.0
+mask:
+  ratio: 0.53
+  num_seeds: 10 #during inference
 
-pad:
-  pad_green: False
-
-gnn:
-  net_type: 'gnn'
-  gnn_type: 'GAT'
-  level: 'graph'
-  heads: 1
-
-prompt:
-  linear_probe: False
-  share_prompt: True
-
+norm:
+  norm_layer: 'adain'
 
 

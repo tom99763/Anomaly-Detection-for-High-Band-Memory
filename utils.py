@@ -21,9 +21,6 @@ def get_config(config_path=None):
         return yaml.load(stream, Loader=yaml.FullLoader)
 def build_dirs(config, opt):
     model_name = config['clip']['model_name']
-    num_segments = config['superpixel']['numSegments']
-    gnn_type = config['gnn']['gnn_type']
-    net_type = config['gnn']['net_type']
     num_negs = config['loss']['num_negs']
     file_name = f'{model_name}_{num_negs}'
     config['file_name'] = file_name
@@ -38,14 +35,6 @@ def build_dirs(config, opt):
 
     output_dir = f'{output_dir}/{type_}'
     ckpt_dir = f'{ckpt_dir}/{type_}'
-
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    if not os.path.exists(ckpt_dir):
-        os.makedirs(ckpt_dir)
-
-    output_dir = f'{output_dir}/{net_type}'
-    ckpt_dir = f'{ckpt_dir}/{net_type}'
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
