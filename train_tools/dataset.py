@@ -15,7 +15,7 @@ def rgb_loader(path):
 
 transform = Compose([
     ToTensor(),
-    Resize([256, 256]),
+    Resize([240, 240]),
     Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
@@ -85,3 +85,19 @@ class HBMDataModule(L.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.ds_test, batch_size=32,
                           num_workers=19, persistent_workers=True, shuffle=False)
+
+
+class MVTecDataset(Dataset):
+    def __init__(self, data_dir, label, transform_):
+        super().__init__()
+        self.data_dir = data_dir
+        self.label = label
+        self.transform = transform_
+    def __getitem__(self, idx):
+        _dir = self.data_dir[idx]
+        label = self.label[idx]
+        img = rgb_loader(_dir)
+        img = self.transform(img)
+        return img, label
+    def __len__(self):
+        return len(self.data_dir)

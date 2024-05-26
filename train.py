@@ -15,13 +15,13 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_dir', type=str, default='../datasets/HBM/HBM-AfterManualJudge/type3')
+    parser.add_argument('--dataset_dir', type=str, default='../datasets/HBM/HBM-AfterManualJudge/type2')
     parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_epochs', type=int, default=200)
     parser.add_argument('--mode', type=str, default='train')
-    parser.add_argument('--learning_type', type=str, default='revdis')
+    parser.add_argument('--learning_type', type=str, default='st')
     opt, _ = parser.parse_known_args()
     return opt
 
@@ -29,6 +29,8 @@ def main(config, opt):
     build_dirs(config, opt)
     #train_tools
     set_seed(0)
+
+    mode = config['st']['mode']
 
     if opt.learning_type == 'stfpm':
         if os.path.exists(config['ckpt_dir']):
@@ -55,14 +57,13 @@ def main(config, opt):
             model = RegionClipLP(config)
 
         if os.path.exists(config['ckpt_dir_s']):
-            return
             print('load student weights')
             model = RegionClipLP.load_from_checkpoint(config['ckpt_dir_s'], config=config)
 
 
     dataset = HBMDataModule(opt)
 
-    '''
+
     if mode == 'student':
         earlystop = EarlyStopping(monitor="val_f1_score", patience=5, mode="max")
         modelckpt = ModelCheckpoint(monitor='val_f1_score',
@@ -94,8 +95,9 @@ def main(config, opt):
             logger=CSVLogger(config['output_log_dir']),
             check_val_every_n_epoch=2,
         )
-    '''
 
+
+    '''
     earlystop = EarlyStopping(monitor="val_sum_score", patience=60, mode="max")
     modelckpt = ModelCheckpoint(monitor='val_sum_score',
                                 dirpath=f"{opt.ckpt_dir}/{opt.learning_type}/"
@@ -109,7 +111,7 @@ def main(config, opt):
         logger=CSVLogger(config['output_log_dir']),
         check_val_every_n_epoch=2,
     )
-
+    '''
 
 
     if opt.mode == 'train':
@@ -120,9 +122,9 @@ def main(config, opt):
 if __name__ == '__main__':
     opt = parse_opt()
     config = get_config()
-    main(config, opt)
+    #main(config, opt)
 
-    '''
+
     num_segments = [100, 200, 75]
     gnn_type = ['GAT', 'GCN']
     net_type = ['gnn', 'linear']
@@ -143,8 +145,7 @@ if __name__ == '__main__':
                 main(config, opt)
                 config['st']['mode'] = 'student'
                 main(config, opt)
-                
-    '''
+
 
 
 

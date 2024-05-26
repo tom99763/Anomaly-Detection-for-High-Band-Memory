@@ -7,7 +7,7 @@ clip:
 
 loss:
   tau: 0.07
-  num_negs: 512
+  num_negs: 1024
 
 mask:
   ratio: 0.53
@@ -16,4 +16,26 @@ mask:
 norm:
   norm_layer: 'adain'
 
+
+superpixel:
+  numSegments: 100
+  sigma: 3.
+
+st:
+  mode: 'teacher'
+  beta: 1.0
+
+pad:
+  pad_green: False
+
+gnn:
+  net_type: 'gnn'
+  gnn_type: 'GAT'
+  level: 'graph'
+  heads: 1
+  num_negs: 512
+
+prompt:
+  linear_probe: False
+  share_prompt: True
 
