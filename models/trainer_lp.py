@@ -36,9 +36,16 @@ class RegionClipLP(L.LightningModule):
         if self.mode == 'teacher':
             img_preds, batch_preds_t, batch_preds_s, \
             batch_nodes_t, batch_nodes_s, batch_anomaps = self.model(x, self.pad_green)
-            loss = nn.CrossEntropyLoss()(batch_preds_t, img_preds.softmax(dim=-1))+ \
-                   torch.sum(img_preds**2, dim=-1).mean() +\
+
+            kl_loss = nn.KLDivLoss(reduction="batchmean")
+            target = img_preds.softmax(dim=-1)
+            input_ = F.log_softmax(batch_preds_t, dim=-1)
+            loss = kl_loss(input_, target) + torch.sum(img_preds**2, dim=-1).mean() +\
                    torch.sum(batch_preds_t**2, dim=-1).mean()
+
+            #loss = nn.CrossEntropyLoss()(batch_preds_t, img_preds.softmax(dim=-1))+ \
+                   #torch.sum(img_preds**2, dim=-1).mean() +\
+                   #torch.sum(batch_preds_t**2, dim=-1).mean()
 
         elif self.mode == 'student':
             img_preds, batch_preds_t, batch_preds_s, \
@@ -85,9 +92,16 @@ class RegionClipLP(L.LightningModule):
         elif self.mode == 'teacher':
             img_preds, batch_preds_t, batch_preds_s, \
             batch_nodes_t, batch_nodes_s, batch_anomaps = self.model(x, self.pad_green)
-            loss = nn.CrossEntropyLoss()(batch_preds_t, img_preds.softmax(dim=-1)) + \
-                   torch.sum(img_preds ** 2, dim=-1).mean() + \
+
+            kl_loss = nn.KLDivLoss(reduction="batchmean")
+            target = img_preds.softmax(dim=-1)
+            input_ = F.log_softmax(batch_preds_t, dim=-1)
+            loss = kl_loss(input_, target) + torch.sum(img_preds ** 2, dim=-1).mean() + \
                    torch.sum(batch_preds_t ** 2, dim=-1).mean()
+
+            #loss = nn.CrossEntropyLoss()(batch_preds_t, img_preds.softmax(dim=-1)) + \
+                   #torch.sum(img_preds ** 2, dim=-1).mean() + \
+                   #torch.sum(batch_preds_t ** 2, dim=-1).mean()
             print('val', y)
             print('val', img_preds.softmax(dim=-1)[:, 1])
             print('val', batch_preds_t.softmax(dim=-1)[:, 1])

@@ -21,8 +21,10 @@ def get_config(config_path=None):
         return yaml.load(stream, Loader=yaml.FullLoader)
 def build_dirs(config, opt):
     model_name = config['clip']['model_name']
-    num_negs = config['loss']['num_negs']
-    file_name = f'{model_name}_{num_negs}'
+    num_segments = config['superpixel']['numSegments']
+    gnn_type = config['gnn']['gnn_type']
+    net_type = config['gnn']['net_type']
+    file_name = f'{model_name}_{num_segments}_{gnn_type}_{net_type}'
     config['file_name'] = file_name
     type_ = opt.dataset_dir.split('/')[-1]
     output_dir = f'{opt.output_dir}/{opt.learning_type}'
